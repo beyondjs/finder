@@ -1,6 +1,6 @@
 const ConfigurableFinder = require('../configurable');
-const DynamicProcessor = require('beyond/utils/dynamic-processor');
-const WatchersClient = require('beyond/utils/watchers/client');
+const DynamicProcessor = require('@beyond-js/dynamic-processor');
+const WatchersClient = require('@beyond-js/watchers/client');
 const ItemBase = require('./item');
 const {isAbsolute} = require('path');
 

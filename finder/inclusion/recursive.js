@@ -1,4 +1,4 @@
-const fs = require('beyond/utils/fs');
+const fs = require('@beyond-js/fs');
 const {relative} = require('path');
 
 /**

@@ -1,5 +1,5 @@
-const DynamicProcessor = require('beyond/utils/dynamic-processor');
-const equal = require('beyond/utils/equal');
+const DynamicProcessor = require('@beyond-js/dynamic-processor');
+const equal = require('@beyond-js/equal');
 const Files = require('../files');
 const Finder = (require('../finder'));
 

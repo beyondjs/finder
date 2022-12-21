@@ -1,5 +1,5 @@
-const DynamicProcessor = require('beyond/utils/dynamic-processor');
-const WatchersClient = require('beyond/utils/watchers/client');
+const DynamicProcessor = require('@beyond-js/dynamic-processor');
+const WatchersClient = require('@beyond-js/watchers/client');
 
 module.exports = class extends DynamicProcessor() {
     get dp() {

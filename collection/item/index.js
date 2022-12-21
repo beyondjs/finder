@@ -1,5 +1,5 @@
 const ItemBase = require('./base');
-const DynamicProcessor = require('beyond/utils/dynamic-processor');
+const DynamicProcessor = require('@beyond-js/dynamic-processor');
 const fs = require('../../../fs');
 
 module.exports = class extends DynamicProcessor(ItemBase) {
