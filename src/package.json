@@ -1,0 +1,17 @@
+{
+	"name": "@beyond-js/finder",
+	"author": "BeyondJS",
+	"email": "hello@beyondjs.com",
+	"version": "0.0.4",
+	"license": "MIT",
+	"repository": "https://github.com/beyondjs/finder",
+	"exports": {
+		".": "./index.js"
+	},
+	"dependencies": {
+		"@beyond-js/fs": "^0.0.1",
+		"@beyond-js/dynamic-processor": "^0.0.2",
+		"@beyond-js/crc32": "^0.0.1",
+		"@beyond-js/watchers": "^0.0.4"
+	}
+}
