@@ -1,10 +1,16 @@
 {
 	"name": "@beyond-js/finder",
-	"author": "BeyondJS",
-	"email": "hello@beyondjs.com",
 	"version": "0.0.5",
 	"license": "MIT",
-	"repository": "https://github.com/beyondjs/finder",
+	"author": {
+		"name": "BeyondJS",
+		"email": "hello@beyondjs.com"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/beyondjs/finder.git"
+	},
+	"homepage": "https://github.com/beyondjs/finder#readme",
 	"exports": {
 		".": "./index.js"
 	},
@@ -13,5 +19,11 @@
 		"@beyond-js/dynamic-processor": "^0.0.4",
 		"@beyond-js/crc32": "^0.0.1",
 		"@beyond-js/watchers": "^0.0.4"
-	}
+	},
+	"keywords": [
+		"beyondjs",
+		"finder",
+		"npm-package",
+		"javascript"
+	]
 }
