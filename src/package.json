@@ -10,7 +10,7 @@
 	},
 	"dependencies": {
 		"@beyond-js/fs": "^0.0.1",
-		"@beyond-js/dynamic-processor": "^0.0.2",
+		"@beyond-js/dynamic-processor": "^0.0.4",
 		"@beyond-js/crc32": "^0.0.1",
 		"@beyond-js/watchers": "^0.0.4"
 	}
