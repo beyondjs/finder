@@ -1,6 +1,6 @@
 {
 	"name": "@beyond-js/finder",
-	"version": "0.0.6",
+	"version": "0.0.7",
 	"license": "MIT",
 	"author": {
 		"name": "BeyondJS",
@@ -16,7 +16,7 @@
 	},
 	"dependencies": {
 		"@beyond-js/fs": "^0.0.1",
-		"@beyond-js/dynamic-processor": "^0.0.4",
+		"@beyond-js/dynamic-processor": "^0.0.5",
 		"@beyond-js/crc32": "^0.0.1",
 		"@beyond-js/watchers": "^0.0.4"
 	},
