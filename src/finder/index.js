@@ -86,9 +86,6 @@ module.exports = class extends DynamicProcessor() {
 	 */
 	constructor(path, specs, watcher) {
 		super();
-		if (watcher && !(watcher instanceof WatchersClient)) {
-			throw new Error('Watcher parameter is not a valid client watcher');
-		}
 
 		specs = require('./parameters.js')(path, specs);
 

@@ -59,10 +59,6 @@ class FinderCollection extends DynamicProcessor(Map) {
 	constructor(watcher, Item) {
 		super();
 
-		if (watcher && !(watcher instanceof WatchersClient)) {
-			throw new Error('Parameter watcher is not a valid background watcher');
-		}
-
 		this.#Item = Item ? Item : ItemBase;
 		this.#finder = new ConfigurableFinder(watcher);
 		super.setup(new Map([['finder', { child: this.#finder }]]));
