@@ -1,7 +1,7 @@
-const DynamicProcessor = require('@beyond-js/dynamic-processor');
-const WatchersClient = require('@beyond-js/watchers/client');
+import { DynamicProcessor } from '@beyond-js/dynamic-processor/main';
+import { WatchersClient } from '@beyond-js/watchers/client';
 
-module.exports = class extends DynamicProcessor() {
+export /*bundle*/ class Finder extends DynamicProcessor() {
 	get dp() {
 		return 'utils.finder';
 	}
@@ -128,4 +128,4 @@ module.exports = class extends DynamicProcessor() {
 		this.#listener?.destroy();
 		this.#inclusions.forEach(inclusion => inclusion.destroy());
 	}
-};
+}

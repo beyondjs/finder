@@ -1,7 +1,7 @@
 module.exports = {
-	Finder: require('./finder'),
+	// Finder: require('./finder'), => exported /*bundle*/
 	ConfigurableFinder: require('./configurable'),
 	FinderCollection: require('./collection'),
 	Files: require('./files'),
-	File: require('./files/file'),
+	File: require('./files/file')
 };
