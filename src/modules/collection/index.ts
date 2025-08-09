@@ -4,7 +4,7 @@ const WatchersClient = require('@beyond-js/watchers/client');
 const ItemBase = require('./item');
 const { isAbsolute } = require('path');
 
-class FinderCollection extends DynamicProcessor(Map) {
+export /*bundle*/ class FinderCollection extends DynamicProcessor(Map) {
 	get dp() {
 		return 'utils.finder-collection';
 	}

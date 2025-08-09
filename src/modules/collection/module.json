@@ -1,0 +1,5 @@
+{
+	"name": "collection",
+	"bundle": "ts",
+	"files": "*"
+}

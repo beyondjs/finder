@@ -1,24 +1,44 @@
 {
 	"name": "@beyond-js/finder",
-	"version": "0.0.9",
-	"license": "MIT",
 	"author": {
 		"name": "BeyondJS",
 		"email": "hello@beyondjs.com"
 	},
+	"version": "1.0.0",
+	"license": "MIT",
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/beyondjs/finder.git"
+		"url": "https://github.com/beyondjs/finder.git"
 	},
 	"homepage": "https://github.com/beyondjs/finder#readme",
-	"exports": {
-		".": "./index.js"
+	"modules": {
+		"path": "modules"
+	},
+	"deployment": {
+		"distributions": [
+			{
+				"name": "node",
+				"platform": "node",
+				"ports": {
+					"bundles": 1110
+				}
+			},
+			{
+				"name": "node-ts",
+				"platform": "node",
+				"ports": {
+					"bundles": 1111
+				},
+				"ts": {
+					"compiler": "tsc"
+				}
+			}
+		]
 	},
 	"dependencies": {
-		"@beyond-js/fs": "^0.0.1",
-		"@beyond-js/dynamic-processor": "^0.0.5",
-		"@beyond-js/crc32": "^0.0.1",
-		"@beyond-js/watchers": "^0.0.5"
+		"@beyond-js/dynamic-processor": "~1.0.7",
+		"@beyond-js/watchers": "~1.0.5",
+		"@beyond-js/file": "~1.0.1"
 	},
 	"keywords": [
 		"beyondjs",

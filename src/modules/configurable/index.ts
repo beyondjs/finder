@@ -3,7 +3,7 @@ const equal = require('@beyond-js/equal');
 const Files = require('../files');
 const Finder = require('../finder');
 
-module.exports = class extends DynamicProcessor(Files) {
+exports /*bundle*/ class extends DynamicProcessor(Files) {
 	get dp() {
 		return 'utils.configurable-finder';
 	}

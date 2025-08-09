@@ -1,5 +1,7 @@
-module.exports = class {
-	#file;
+import { FileData } from '@beyond-js/file/data';
+
+export default class ItemBase {
+	#file: FileData;
 
 	get root() {
 		return this.#file.root;
@@ -29,11 +31,11 @@ module.exports = class {
 		return this.#file.relative;
 	}
 
-	constructor(file) {
+	constructor(file: FileData) {
 		this.#file = file;
 	}
 
 	toJSON() {
 		return this.#file.toJSON();
 	}
-};
+}

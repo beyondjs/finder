@@ -4,7 +4,7 @@ const File = require('./file');
  * An array of files with unique relative paths.
  * It is an array because it is required to keep the order of the files.
  */
-module.exports = class extends Array {
+export /*bundle*/ class Files extends Array {
 	#root;
 	get root() {
 		return this.#root;
@@ -135,4 +135,4 @@ module.exports = class extends Array {
 		files.forEach(file => this.push(file, false));
 		sort && this.sort();
 	}
-};
+}
