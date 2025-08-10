@@ -126,7 +126,7 @@ export /*bundle*/ class FinderCollection<ItemType> extends DynamicProcessor(Map<
 		this.#ordered = ordered;
 	}
 
-	configure(path: string, spec: FilterSpec) {
+	configure(path?: string, spec?: FilterSpec) {
 		this.#finder.configure(path, spec);
 	}
 
