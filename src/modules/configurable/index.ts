@@ -1,4 +1,4 @@
-import type { WatcherClient } from '@beyond-js/watchers/client';
+import type { WatcherClient, ListenerType } from '@beyond-js/watchers/client';
 import type { FilterSpec } from '@beyond-js/finder/types';
 import { RequireType } from '@beyond-js/dynamic-processor/main';
 import { DynamicProcessor } from '@beyond-js/dynamic-processor/main';
@@ -19,6 +19,10 @@ export /*bundle*/ class ConfigurableFinder extends DynamicProcessor(FilesArray) 
 	#finder: Finder | undefined;
 	get _finder() {
 		return this.#finder;
+	}
+
+	get listener(): ListenerType | undefined {
+		return this.#finder?.listener;
 	}
 
 	get path() {

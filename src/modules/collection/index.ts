@@ -1,9 +1,9 @@
-import type { WatcherClient } from '@beyond-js/watchers/client';
+import type { ListenerType, WatcherClient } from '@beyond-js/watchers/client';
 import type { FileData } from '@beyond-js/file/data';
 import type { FilterSpec } from '@beyond-js/finder/types';
-import { ConfigurableFinder } from '../configurable';
+import { ConfigurableFinder } from '@beyond-js/finder/configurable';
 import { DynamicProcessor } from '@beyond-js/dynamic-processor/main';
-import { DynamicFile } from '@beyond-js/file/dynamic';
+import { FinderFile } from './file';
 import { isAbsolute } from 'path';
 
 export /*bundle*/ class FinderCollection<ItemType> extends DynamicProcessor(Map<string, any>) {
@@ -17,8 +17,8 @@ export /*bundle*/ class FinderCollection<ItemType> extends DynamicProcessor(Map<
 		return this.#Item;
 	}
 
-	get watcher(): WatcherClient {
-		return this.#finder.watcher;
+	get listener(): ListenerType | undefined {
+		return this.#finder?.listener;
 	}
 
 	get path() {
@@ -64,7 +64,7 @@ export /*bundle*/ class FinderCollection<ItemType> extends DynamicProcessor(Map<
 	constructor(watcher: WatcherClient, Item: any) {
 		super();
 
-		this.#Item = Item ? Item : DynamicFile;
+		this.#Item = Item ? Item : FinderFile;
 		this.#finder = new ConfigurableFinder(watcher);
 		super.setup(new Map([['finder', { child: this.#finder }]]));
 	}
