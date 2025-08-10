@@ -1,9 +1,16 @@
-const File = require('../../files/file');
+import type { Finder } from '../';
+import type { ListenerType } from '@beyond-js/watchers/client';
+import type Inclusion from '../inclusion';
+import { FileData } from '@beyond-js/file/data';
 
-module.exports = class {
-	#finder;
-	#inclusions;
-	#listener;
+export default class Listener {
+	#finder: Finder;
+	#inclusions: Map<string, Inclusion>;
+
+	#listener: ListenerType;
+	get listener(): ListenerType {
+		return this.#listener;
+	}
 
 	#destroyed = false;
 	get destroyed() {
@@ -11,46 +18,36 @@ module.exports = class {
 	}
 
 	#createListener = () => {
-		const { watcher, specs, path } = this.#finder;
+		const { watcher, spec, path } = this.#finder;
 		if (!watcher) return;
 
-		let includes = specs.includes.includes('*') ? undefined : specs.includes;
+		let includes = spec.includes.includes('*') ? undefined : spec.includes;
 		includes = typeof includes === 'string' ? [includes] : includes;
 
-		const excludes = typeof specs.excludes === 'string' ? [specs.excludes] : specs.excludes;
+		const excludes = typeof spec.excludes === 'string' ? [spec.excludes] : spec.excludes;
 
 		this.#listener = watcher.listeners.create(path, {
 			includes: includes,
 			excludes: excludes,
-			filename: specs.filename,
-			extname: specs.extname,
+			filename: spec.filename,
+			extname: spec.extname
 		});
 
 		this.#listener.on('add', this.#add);
 		this.#listener.on('unlink', this.#unlink);
 		this.#listener.on('change', this.#change);
 
-		this.#listener.listen().catch(exc => console.error(exc.stack));
+		this.#listener.listen().catch((exc: Error) => console.error(exc.stack));
 	};
 
-	constructor(finder, inclusions) {
+	constructor(finder: Finder, inclusions: Map<string, Inclusion>) {
 		this.#finder = finder;
 		this.#inclusions = inclusions;
 
 		this.#createListener();
 	}
 
-	#change = file => {
-		if (this.#destroyed) {
-			console.warn(`Event received on a destroyed listener. File: "${file}".`);
-			return;
-		}
-
-		file = new File(this.#finder.path, file);
-		this.#finder.processed && this.#finder.emit('file.change', file);
-	};
-
-	#add = file => {
+	#add = (file: string) => {
 		if (this.#destroyed) {
 			console.warn(`Event received on a destroyed listener. File: "${file}".`);
 			return;
@@ -61,7 +58,7 @@ module.exports = class {
 		changed && this.#finder.processed && this.#finder._invalidate();
 	};
 
-	#unlink = file => {
+	#unlink = (file: string) => {
 		if (this.#destroyed) {
 			console.warn(`Event received on a destroyed listener. File: "${file}".`);
 			return;
@@ -72,8 +69,18 @@ module.exports = class {
 		changed && this.#finder.processed && this.#finder._invalidate();
 	};
 
+	#change = (file: string) => {
+		if (this.#destroyed) {
+			console.warn(`Event received on a destroyed listener. File: "${file}".`);
+			return;
+		}
+
+		const fdata = new FileData(this.#finder.path, file);
+		this.#finder.processed && this.#finder.emit('file.change', fdata);
+	};
+
 	destroy() {
 		this.#destroyed = true;
 		this.#listener.destroy();
 	}
-};
+}

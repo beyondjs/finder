@@ -1,12 +1,15 @@
+import type { FilterSpec } from '@beyond-js/finder/types';
+import type Inclusion from './inclusion';
+
 /**
  * Iterator of files
  *
- * @param includes {array}
- * @param inclusions {Map}
- * @returns {function}
+ * @param includes
+ * @param inclusions
+ * @returns {function*}
  */
-module.exports = (includes, inclusions) =>
-	function* () {
+export default function (includes: FilterSpec['includes'], inclusions: Map<string, Inclusion>) {
+	return function* () {
 		if (!inclusions) return;
 
 		const keys = new Set();
@@ -21,3 +24,4 @@ module.exports = (includes, inclusions) =>
 			}
 		}
 	};
+}

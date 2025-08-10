@@ -1,68 +1,79 @@
+import type { WatcherClient } from '@beyond-js/watchers/client';
+import type { FilterSpec, IDiagnostic } from '@beyond-js/finder/types';
+import type { ListenerType } from '@beyond-js/watchers/client';
 import { DynamicProcessor } from '@beyond-js/dynamic-processor/main';
-import { WatchersClient } from '@beyond-js/watchers/client';
+import Listener from './listener';
+import Inclusion from './inclusion';
+import InclusionFiles from './inclusion/files';
+import Iterator from './iterator';
+import Parameters from './parameters';
 
 export /*bundle*/ class Finder extends DynamicProcessor() {
 	get dp() {
 		return 'utils.finder';
 	}
 
-	#watcher;
+	#watcher: WatcherClient;
 	get watcher() {
 		return this.#watcher;
 	}
 
-	#path;
+	#path: string;
 	get path() {
 		return this.#path;
 	}
 
-	#specs;
-	get specs() {
-		return this.#specs;
+	#spec: FilterSpec;
+	get spec() {
+		return this.#spec;
 	}
 
-	get filename() {
-		return this.#specs.filename;
+	get filename(): FilterSpec['filename'] {
+		return this.#spec.filename;
 	}
 
-	get extname() {
-		return this.#specs.extname;
+	get extname(): FilterSpec['extname'] {
+		return this.#spec.extname;
 	}
 
-	get includes() {
-		return this.#specs.includes;
+	get includes(): FilterSpec['includes'] {
+		return this.#spec.includes;
 	}
 
-	get excludes() {
-		return this.#specs.excludes;
+	get excludes(): FilterSpec['excludes'] {
+		return this.#spec.excludes;
 	}
 
-	#inclusions;
-	#listener;
+	#inclusions: Map<string, Inclusion>;
+
+	#listener: Listener | undefined;
+	get listener(): ListenerType {
+		return this.#listener?.listener;
+	}
 
 	get [Symbol.iterator]() {
-		return require('./iterator')(this.#specs.includes, this.#inclusions);
+		return Iterator(this.#spec.includes, this.#inclusions);
 	}
 
 	get errors() {
-		const output = [];
+		const output: IDiagnostic[] = [];
 		this.#inclusions.forEach(inclusion => output.push(...inclusion.errors));
 		return output;
 	}
 
-	#warnings = [];
+	#warnings: IDiagnostic[] = [];
 	get warnings() {
 		return this.#warnings;
 	}
 
 	get files() {
-		const files = new (require('./inclusion/files'))(this.#path, this.#specs);
-		this.#specs.includes.forEach(include => files.append(this.#inclusions.get(include)));
+		const files = new InclusionFiles(this.#path, this.#spec);
+		this.#spec.includes.forEach(include => files.append(this.#inclusions.get(include)));
 		return Object.freeze(files);
 	}
 
 	get missing() {
-		const output = [];
+		const output: string[] = [];
 		this.#inclusions.forEach(inclusion => !inclusion.length && output.push(inclusion.entry));
 		return output;
 	}
@@ -76,7 +87,7 @@ export /*bundle*/ class Finder extends DynamicProcessor() {
 	/**
 	 * Static finder constructor
 	 * @param path {string} The path where to find the files
-	 * @param specs {object | string | function | array}
+	 * @param spec {object | string | function | array}
 	 *      . includes {array} Array of files or folders to be included in the search
 	 *      . excludes {array} The files or folders to be excluded of the search
 	 *      . filename {string} The name of the files to be found
@@ -84,29 +95,32 @@ export /*bundle*/ class Finder extends DynamicProcessor() {
 	 *      . filter {function} Function to filter files
 	 * @param watcher {object} Files watcher to listen for file changes
 	 */
-	constructor(path, specs, watcher) {
+	constructor(path: string, spec: FilterSpec, watcher: WatcherClient) {
 		super();
 
-		specs = require('./parameters.js')(path, specs);
+		spec = Parameters(path, spec);
 
 		this.#watcher = watcher;
 		this.#path = path;
-		this.#specs = specs;
+		this.#spec = spec;
 
 		this.#inclusions = new Map();
-		for (const entry of specs.includes) {
+
+		for (const entry of spec.includes) {
 			if (typeof entry !== 'string') {
-				this.#warnings.push(`${entry} is not a string`);
+				const code = 'INCLUSION_NOT_A_STRING';
+				const message = `Inclusion "${entry}" is not a string`;
+				this.#warnings.push({ code, message });
 				continue;
 			}
-			const inclusion = new (require('./inclusion'))(path, entry, specs);
+			const inclusion = new Inclusion(path, entry, spec);
 			this.#inclusions.set(entry, inclusion);
 		}
 	}
 
-	#timer;
+	#timer: NodeJS.Timeout | undefined;
 
-	emit(event, ...params) {
+	emit(event: string, ...params: any[]) {
 		if (event === 'change') {
 			clearTimeout(this.#timer);
 			this.#timer = setTimeout(() => this._events.emit(event, ...params), 10);
@@ -116,9 +130,9 @@ export /*bundle*/ class Finder extends DynamicProcessor() {
 	}
 
 	async _begin() {
-		this.#listener = new (require('./listener'))(this, this.#inclusions);
+		this.#listener = new Listener(this, this.#inclusions);
 
-		const promises = [];
+		const promises: Promise<void | boolean>[] = [];
 		this.#inclusions.forEach(inclusion => promises.push(inclusion.process()));
 		await Promise.all(promises).catch(exc => console.error(exc.stack));
 	}

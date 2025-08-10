@@ -1,23 +1,23 @@
+import type { FileData } from '@beyond-js/file/data';
+import type { FilterSpec } from '@beyond-js/finder/types';
+import { FilesArray } from '@beyond-js/finder/files';
+import { FilesFilter } from './filter';
+
 /**
  * Adds a filter specification to the array of files
  */
-module.exports = class extends require('../../../files') {
+export default class InclusionFiles extends FilesArray {
 	// An object with a .check(file) method that verifies if a file
 	// complies with the specified filters
-	#filter;
-	get filter() {
-		return this.#filter;
-	}
+	#filter: FilesFilter;
 
-	constructor(root, specs) {
-		if (typeof root === 'number') {
-			// Occurs when the inclusion is created internally by javascript.
-			// Example: When splice is executed, it returns an array of the elements being deleted.
-			return super(root);
+	constructor(root: string, spec?: FilterSpec) {
+		if (typeof root !== 'string' || !spec) {
+			throw new Error('Invalid parameters, root and spec are required');
 		}
 
 		super(root);
-		this.#filter = new (require('./filter'))(root, specs);
+		this.#filter = new FilesFilter(root, spec);
 	}
 
 	/**
@@ -25,11 +25,11 @@ module.exports = class extends require('../../../files') {
 	 * @param file {object} The file object
 	 * @param sort {boolean}
 	 */
-	push(file, sort = true) {
-		file = this._getFileObject(file);
+	push(file: FileData, sort = true) {
+		file = this.normalize(file);
 		const check = this.#filter.check(file);
 		if (!check.passed) return;
 
 		return super.push(file, sort);
 	}
-};
+}

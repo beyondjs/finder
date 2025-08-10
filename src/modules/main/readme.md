@@ -27,8 +27,8 @@ Listens for a specific event. The primary event is `'file.change'`, which is emi
 
 ## `files`
 
-A getter that returns a `Files` object (an array-like collection) containing all files found by the `Finder` that match
-the given specifications.
+A getter that returns a `FilesArray` object (an array-like collection) containing all files found by the `Finder` that
+match the given specifications.
 
 ## `errors`
 

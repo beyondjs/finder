@@ -1,18 +1,23 @@
-const ConfigurableFinder = require('../configurable');
-const DynamicProcessor = require('@beyond-js/dynamic-processor');
-const WatchersClient = require('@beyond-js/watchers/client');
-const ItemBase = require('./item');
-const { isAbsolute } = require('path');
+import type { WatcherClient } from '@beyond-js/watchers/client';
+import type { FileData } from '@beyond-js/file/data';
+import type { FilterSpec } from '@beyond-js/finder/types';
+import { ConfigurableFinder } from '../configurable';
+import { DynamicProcessor } from '@beyond-js/dynamic-processor/main';
+import { DynamicFile } from '@beyond-js/file/dynamic';
+import { isAbsolute } from 'path';
 
-export /*bundle*/ class FinderCollection extends DynamicProcessor(Map) {
+export /*bundle*/ class FinderCollection<ItemType> extends DynamicProcessor(Map<string, any>) {
 	get dp() {
 		return 'utils.finder-collection';
 	}
 
-	#finder;
-	#Item;
+	#finder: ConfigurableFinder;
+	#Item: any;
+	get Item() {
+		return this.#Item;
+	}
 
-	get watcher() {
+	get watcher(): WatcherClient {
 		return this.#finder.watcher;
 	}
 
@@ -20,8 +25,8 @@ export /*bundle*/ class FinderCollection extends DynamicProcessor(Map) {
 		return this.#finder.path;
 	}
 
-	get specs() {
-		return this.#finder.specs;
+	get spec() {
+		return this.#finder.spec;
 	}
 
 	get filename() {
@@ -45,7 +50,7 @@ export /*bundle*/ class FinderCollection extends DynamicProcessor(Map) {
 	}
 
 	// Ordered array of collection keys
-	#ordered = [];
+	#ordered: string[] = [];
 	get ordered() {
 		return this.#ordered;
 	}
@@ -56,40 +61,31 @@ export /*bundle*/ class FinderCollection extends DynamicProcessor(Map) {
 	 * @param watcher {object} The fs watcher
 	 * @param Item {object} The collection item
 	 */
-	constructor(watcher, Item) {
+	constructor(watcher: WatcherClient, Item: any) {
 		super();
 
-		this.#Item = Item ? Item : ItemBase;
+		this.#Item = Item ? Item : DynamicFile;
 		this.#finder = new ConfigurableFinder(watcher);
 		super.setup(new Map([['finder', { child: this.#finder }]]));
-		this.#finder.on('file.change', this.#onFileChanged);
 	}
 
-	getKey(file) {
-		const normalize = file => file.replace(/\\/g, '/').replace(/\/$/, ''); // Remove trailing slash
-
+	#normalize(file: FileData) {
+		const normalize = (file: string) => file.replace(/\\/g, '/').replace(/\/$/, ''); // Remove trailing slash
 		const key = this.filename ? file.relative.dirname : file.relative.file;
 		return normalize(key);
 	}
-
-	#onFileChanged = file => {
-		const key = this.getKey(file);
-		if (!this.has(key)) return;
-		const item = this.get(key);
-		typeof item.fileChanged === 'function' && item.fileChanged();
-	};
 
 	/**
 	 * Access to the .has(key) method of the items map
 	 *
 	 * @param file {object | string}
 	 */
-	has(file) {
+	has(file: string) {
 		if (!this.path) return false;
 		if (super.has(file)) return super.has(file);
 
-		if (isAbsolute(file) && file.substr(0, this.path.length) !== this.path) return false;
-		const key = this.getKey(this.#finder._getFileObject(file));
+		if (isAbsolute(file) && file.slice(0, this.path.length) !== this.path) return false;
+		const key = this.#normalize(this.#finder.normalize(file));
 		return super.has(key);
 	}
 
@@ -98,20 +94,21 @@ export /*bundle*/ class FinderCollection extends DynamicProcessor(Map) {
 	 *
 	 * @param file {object | string}
 	 */
-	get(file) {
+	get(file: string | FileData) {
 		if (!this.path) return;
-		if (super.has(file)) return super.get(file);
 
-		if (isAbsolute(file) && file.substr(0, this.path.length) !== this.path) return false;
-		const key = this.getKey(this.#finder._getFileObject(file));
+		const key = this.#normalize(this.#finder.normalize(file));
+		if (super.has(key)) return super.get(key);
+
+		if (isAbsolute(key) && key.slice(0, this.path.length) !== this.path) return false;
 		return super.get(key);
 	}
 
 	_process() {
 		const updated = new Map();
-		const ordered = [];
+		const ordered: string[] = [];
 		this.#finder.forEach(file => {
-			const key = this.getKey(file);
+			const key = this.#normalize(file);
 			ordered.push(key);
 
 			let item = this.has(key) ? this.get(key) : new this.#Item(this, file);
@@ -119,7 +116,7 @@ export /*bundle*/ class FinderCollection extends DynamicProcessor(Map) {
 		});
 
 		// Destroy the resources that are not currently in the collection
-		this.forEach((item, key) => !updated.has(key) && item.destroy());
+		this.forEach((item: any, key: string) => !updated.has(key) && item.destroy?.());
 
 		super.clear(); // Do not use this.clear, as it will destroy all the previously created items
 		updated.forEach((item, key) => this.set(key, item));
@@ -129,40 +126,45 @@ export /*bundle*/ class FinderCollection extends DynamicProcessor(Map) {
 		this.#ordered = ordered;
 	}
 
-	configure(path, specs) {
-		this.#finder.configure(path, specs);
+	configure(path: string, spec: FilterSpec) {
+		this.#finder.configure(path, spec);
 	}
 
 	// forEach must respect the order of the files arranged by the finder
-	forEach(callback) {
-		this.#ordered.forEach(key => callback(super.get(key), key));
-	}
-
-	entries() {
-		const entries = [];
-		this.#ordered.forEach(key => entries.push([key, super.get(key)]));
-		return entries.values();
+	forEach(callback: (value: ItemType, key: string, map: this) => void, thisArg?: any): void {
+		for (const key of this.#ordered) {
+			// super.get(key)! si estás seguro de que existe
+			const value = super.get(key) as ItemType;
+			callback.call(thisArg, value, key, this);
+		}
 	}
 
 	[Symbol.iterator] = () => {
 		return this.entries();
 	};
 
+	*entries(): ReturnType<Map<string, ItemType>['entries']> {
+		for (const key of this.#ordered) {
+			const value: ItemType = super.get(key);
+			yield [key, value];
+		}
+	}
+
 	keys() {
-		const keys = [];
+		const keys: string[] = [];
 		this.#ordered.forEach(key => keys.push(key));
 		return keys.values();
 	}
 
-	values() {
-		const values = [];
+	values(): ReturnType<Map<string, ItemType>['values']> {
+		const values: ItemType[] = [];
 		this.#ordered.forEach(key => values.push(super.get(key)));
 		return values.values();
 	}
 
 	clear() {
 		this.#ordered.length = 0;
-		this.forEach(item => item.destroy());
+		this.forEach(item => (item as any).destroy?.());
 		return super.clear();
 	}
 
@@ -172,6 +174,3 @@ export /*bundle*/ class FinderCollection extends DynamicProcessor(Map) {
 		this.#finder.destroy();
 	}
 }
-
-FinderCollection.Item = require('./item');
-module.exports = FinderCollection;

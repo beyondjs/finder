@@ -9,7 +9,7 @@ provides methods for adding, deleting, and searching for files within a specifie
 
 ## `constructor(root: string)`
 
-Creates a new `Files` instance tied to a specific root directory.
+Creates a new `FilesArray` instance tied to a specific root directory.
 
 ## `push(file: object, sort?: boolean)`
 
@@ -28,10 +28,10 @@ Checks if a file exists in the collection.
 
 Returns a file object from the collection if it exists.
 
-## `append(files: Files, sort?: boolean)`
+## `append(files: FileArray, sort?: boolean)`
 
-Adds all the files from another `Files` instance to the current collection. An optional `sort` parameter can be used to
-sort the array after appending.
+Adds all the files from another `FilesArray` instance to the current collection. An optional `sort` parameter can be
+used to sort the array after appending.
 
 ## `clear()`
 

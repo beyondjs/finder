@@ -1,27 +1,22 @@
-const DynamicProcessor = require('@beyond-js/dynamic-processor');
-const equal = require('@beyond-js/equal');
-const Files = require('../files');
-const Finder = require('../finder');
+import type { WatcherClient } from '@beyond-js/watchers/client';
+import type { FilterSpec } from '@beyond-js/finder/types';
+import { RequireType } from '@beyond-js/dynamic-processor/main';
+import { DynamicProcessor } from '@beyond-js/dynamic-processor/main';
+import { equal } from '@beyond-js/equal/main';
+import { FilesArray } from '@beyond-js/finder/files';
+import { Finder } from '@beyond-js/finder/main';
 
-exports /*bundle*/ class extends DynamicProcessor(Files) {
+export /*bundle*/ class ConfigurableFinder extends DynamicProcessor(FilesArray) {
 	get dp() {
 		return 'utils.configurable-finder';
 	}
 
-	#watcher;
-
-	/**
-	 * Configurable finder constructor
-	 *
-	 * @param watcher= {*} The files watcher service
-	 */
-	constructor(watcher) {
-		super();
-		this.#watcher = watcher;
+	#watcher?: WatcherClient;
+	get watcher() {
+		return this.#watcher;
 	}
 
-	#finder;
-
+	#finder: Finder | undefined;
 	get _finder() {
 		return this.#finder;
 	}
@@ -30,8 +25,8 @@ exports /*bundle*/ class extends DynamicProcessor(Files) {
 		return this.#finder?.path;
 	}
 
-	get specs() {
-		return this.#finder?.specs;
+	get spec() {
+		return this.#finder?.spec;
 	}
 
 	get filename() {
@@ -54,13 +49,19 @@ exports /*bundle*/ class extends DynamicProcessor(Files) {
 		return this.#finder ? this.#finder.missing : [];
 	}
 
-	#onFileChanged = file => {
-		this._events.emit('file.change', file);
-	};
+	#previous?: { path: string; specs: FilterSpec };
 
-	#previous;
+	/**
+	 * Configurable finder constructor
+	 *
+	 * @param watcher= {*} The files watcher service
+	 */
+	constructor(watcher: WatcherClient = void 0) {
+		super(''); // Initialize with an empty path waiting for configuration
+		this.#watcher = watcher;
+	}
 
-	configure(path, specs) {
+	configure(path: string, specs: FilterSpec) {
 		if (this.destroyed) throw new Error('Configurable finder is destroyed');
 		if (!path && specs) throw new Error('Invalid parameters');
 
@@ -70,7 +71,6 @@ exports /*bundle*/ class extends DynamicProcessor(Files) {
 
 		// The configuration has been changed.
 		// The .create() method is responsible for eliminating the previous finder if it exists.
-		this.children.has('finder') && this.children.unregister(['finder']);
 		this.#finder?.destroy();
 		this.#finder = void 0;
 		if (!path) {
@@ -80,9 +80,11 @@ exports /*bundle*/ class extends DynamicProcessor(Files) {
 
 		super.reset(path);
 		this.#finder = new Finder(path, specs, this.#watcher);
-		this.children.register(new Map([['finder', { child: this.#finder }]]));
-		this.#finder.on('file.change', this.#onFileChanged);
 		this._invalidate();
+	}
+
+	_prepared(require: RequireType) {
+		this.#finder && require(this.#finder, 'finder');
 	}
 
 	_process() {
@@ -94,4 +96,4 @@ exports /*bundle*/ class extends DynamicProcessor(Files) {
 		super.destroy();
 		this.#finder?.destroy();
 	}
-};
+}

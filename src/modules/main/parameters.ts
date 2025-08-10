@@ -1,10 +1,12 @@
+import type { FilterSpec } from '@beyond-js/finder/types';
+
 /**
  * Validates Finder constructor parameters
  *
  * @param path {string} The path where to find the files
  * @param specs {object} The finder specification
  */
-module.exports = function (path, specs) {
+export default function Parameters(path: string, specs: FilterSpec): FilterSpec {
 	'use strict';
 
 	if (!path && !specs) return {};
@@ -28,4 +30,4 @@ module.exports = function (path, specs) {
 	specs.excludes = specs.excludes ? specs.excludes : [];
 
 	return specs;
-};
+}

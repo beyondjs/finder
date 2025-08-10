@@ -1,5 +1,10 @@
-const fs = require('@beyond-js/fs');
-const { relative } = require('path');
+import type { FilterSpec } from '@beyond-js/finder/types';
+import type { IDiagnostic } from '@beyond-js/finder/types';
+import { FilesArray } from '@beyond-js/finder/files';
+import * as fs from 'fs';
+import { relative } from 'path';
+
+const { readdir, stat, access } = fs.promises;
 
 /**
  * Recursive search in a specific directory.
@@ -8,28 +13,28 @@ const { relative } = require('path');
  * calling the .destroy() method.
  * After calling the .process() method, the consumer should check if the object was destroyed while processing.
  */
-module.exports = class {
-	#root;
+export default class RecursiveFinder {
+	#root: string;
 	get root() {
 		return this.#root;
 	}
 
-	#path;
+	#path: string;
 	get path() {
 		return this.#path;
 	}
 
-	#specs;
-	get specs() {
-		return this.#specs;
+	#spec: FilterSpec;
+	get spec() {
+		return this.#spec;
 	}
 
-	#files;
+	#files: FilesArray;
 	get files() {
 		return this.#files;
 	}
 
-	#errors = [];
+	#errors: IDiagnostic[] = [];
 	get errors() {
 		return this.#errors;
 	}
@@ -55,13 +60,13 @@ module.exports = class {
 	 * @param root {string} The root of the search, required to check if a folder is going
 	 * to be excluded by the excludes specification (it is expressed as a relative path)
 	 * @param path {string} The path where to find the files
-	 * @param specs {object} The finder specification (filename, extname, filter, excludes).
+	 * @param spec {object} The finder specification (filename, extname, filter, excludes).
 	 * Includes is not used here as this class is already under an inclusion (specified in the includes).
 	 */
-	constructor(root, path, specs) {
+	constructor(root: string, path: string, spec: FilterSpec) {
 		this.#root = root;
 		this.#path = path;
-		this.#specs = specs;
+		this.#spec = spec;
 	}
 
 	/**
@@ -70,30 +75,30 @@ module.exports = class {
 	 * @param path {string} The directory where to search for the files
 	 * @returns {Promise<object>}
 	 */
-	#readdir = async path => {
-		const output = new (require('./files'))(this.#root, this.#specs);
-		const excludes = this.#specs.excludes;
+	#readdir = async (path: string) => {
+		const output = new (require('./files'))(this.#root, this.#spec);
+		const excludes = this.#spec.excludes;
 
-		const files = await fs.readdir(path);
+		const files = await readdir(path);
 		if (this.#destroyed) return;
 
 		for (let file of files) {
 			file = require('path').join(path, file);
 
-			let stat = await fs.stat(file);
+			let { isDirectory, isFile } = await stat(file);
 			if (this.#destroyed) return;
 
 			// Check if directory is excluded from the search
-			const excluded = file => {
+			const excluded = (file: string) => {
 				const r = relative(this.#root, file);
 				return excludes.reduce((prev, exclude) => prev || relative(exclude, r) === '', false);
 			};
 
-			if (stat.isDirectory()) {
+			if (isDirectory()) {
 				// Continue the recursive search
 				!excluded(file) && output.append(await this.#readdir(file));
 				if (this.#destroyed) return;
-			} else if (stat.isFile()) {
+			} else if (isFile()) {
 				// If the file does not meet the filters criteria, it will be automatically discarded
 				!excluded(file) && output.push(file);
 			}
@@ -109,8 +114,17 @@ module.exports = class {
 
 		this.#processing = true;
 		try {
-			const exists = await fs.exists(this.#path);
-			this.#files = !exists ? new (require('./files'))(this.#path, this.#specs) : await this.#readdir(this.#path);
+			const exists = (async () => {
+				try {
+					await access(this.#path);
+					return true;
+				} catch (exc) {
+					if (exc.code === 'ENOENT') return false;
+					throw exc;
+				}
+			})();
+
+			this.#files = !exists ? new (require('./files'))(this.#path, this.#spec) : await this.#readdir(this.#path);
 		} catch (exc) {
 			console.error(exc.stack);
 			this.#errors.push(exc.message);
@@ -124,4 +138,4 @@ module.exports = class {
 	destroy() {
 		this.#destroyed = true;
 	}
-};
+}

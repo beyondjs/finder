@@ -1,138 +1,228 @@
-const File = require('./file');
+import { FileData } from '@beyond-js/file/data';
+import { isAbsolute, join } from 'path';
 
 /**
- * An array of files with unique relative paths.
- * It is an array because it is required to keep the order of the files.
+ * Represents an ordered collection of files with unique relative paths.
+ *
+ * This class extends Array to preserve the order of files while
+ * adding fast existence checks via a Set of relative file paths.
  */
-export /*bundle*/ class Files extends Array {
-	#root;
+export /*bundle*/ class FilesArray {
+	#files: FileData[] = [];
+
+	#root: string;
 	get root() {
 		return this.#root;
 	}
 
-	#keys = new Set(); // The relative paths of the files
+	get length(): number {
+		return this.#files.length;
+	}
 
-	constructor(root) {
-		if (typeof root === 'number') {
-			// Occurs when the inclusion is created internally by javascript.
-			// Example: When splice is executed, it returns an array of the elements being deleted.
-			return super(root);
-		}
+	// Set of relative file paths for quick lookup and uniqueness enforcement
+	#keys: Set<string> = new Set(); // The relative paths of the files
 
-		super();
+	constructor(root: string) {
 		this.#root = root;
 	}
 
+	/**
+	 * Sort files by their relative path.
+	 */
 	sort() {
-		return super.sort((a, b) => (a.relative.file < b.relative.file ? -1 : 1));
+		return this.#files.sort((a, b) => (a.relative.file < b.relative.file ? -1 : 1));
 	}
 
 	/**
-	 * Push a file to the array
-	 * @param file {object} The file object
-	 * @param sort {boolean}
+	 * Add a file to the collection.
+	 *
+	 * @param file - File to add.
+	 * @param sort - Whether to sort the collection after insertion.
+	 *
+	 * @note Overrides Array.push with a custom signature to enforce FileData usage
+	 *       and optionally maintain sorted order. We intentionally break Array's
+	 *       method signature, so @ts-ignore is used.
 	 */
-	push(file, sort) {
-		file = this._getFileObject(file);
+	push(file: string | FileData, sort: boolean = true): FileData | undefined {
+		file = this.normalize(file);
 
-		if (this.includes(file)) return; // File already exists in the array
+		if (this.includes(file)) return; // Skip if file already exists
 
 		this.#keys.add(file.relative.file);
-		super.push(file);
+		this.#files.push(file);
 		sort && this.sort();
 		return file;
 	}
 
+	/**
+	 * Remove all files from the array.
+	 */
 	clear() {
 		this.#keys.clear();
-		this.length = 0;
+		this.#files.length = 0;
 	}
 
-	reset(root) {
+	/**
+	 * Clear the array and set a new root path.
+	 */
+	reset(root: string) {
 		this.clear();
 		this.#root = root;
 	}
 
-	delete(file) {
+	/**
+	 * Remove a specific file from the collection.
+	 *
+	 * @param file - File to delete (either a FileData instance or a string path).
+	 */
+	delete(file: FileData | string) {
 		if (!this.#root) return;
 
-		file = this._getFileObject(file);
+		file = this.normalize(file);
 		if (!this.includes(file)) return;
 
 		const index = this.indexOf(file);
-		super.splice(index, 1);
+		this.#files.splice(index, 1);
 		this.#keys.delete(file.relative.file);
 		return true;
 	}
 
 	/**
-	 * Returns a file object
+	 * Normalize an input into a FileData instance.
 	 *
-	 * @param file {string | object} If a file object is passed, this function just returns it,
-	 * otherwise it creates a File and returns it
+	 * @param file - A FileData instance or a file path string.
+	 * @throws If Files is not configured or if the parameter is invalid.
 	 */
-	_getFileObject = file => {
+	normalize(file: string | FileData): FileData {
 		if (!this.#root) throw new Error('Files is not configured');
 
-		if (file instanceof File) return file;
+		if (file instanceof FileData) return file;
 		if (typeof file !== 'string') throw new Error('Invalid file parameter');
 
-		const p = require('path');
-		file = p.isAbsolute(file) ? file : p.join(this.#root, file);
-		return new File(this.#root, file);
-	};
+		file = isAbsolute(file) ? file : join(this.#root, file);
+		return new FileData(this.#root, file);
+	}
 
 	/**
-	 * The key of a file is its relative path
+	 * Compute the unique key for a file.
 	 *
-	 * @param file {string | object} Can be the relative path of the file, the absolute path or a file object
-	 * @returns {string} The relative path of the file
+	 * @param file - FileData or path.
+	 * @returns The relative path key.
 	 */
-	#getKey = file => {
+	#key(file: string | FileData): string {
 		if (typeof file === 'string') {
-			if (!require('path').isAbsolute(file)) return file;
-			file = new File(this.#root, file);
+			if (!isAbsolute(file)) return file;
+			file = new FileData(this.#root, file);
 			return file.relative.file;
+		} else if (file instanceof File) {
+			return file.relative.file;
+		} else {
+			throw new Error('Invalid file parameter');
 		}
-		if (file instanceof File) return file.relative.file;
-		throw new Error('Invalid file parameter');
-	};
+	}
 
-	includes(file) {
+	/**
+	 * Check if the collection contains a specific file.
+	 */
+	includes(file: string | FileData) {
 		if (!this.#root) return false;
-		return this.#keys.has(this.#getKey(file));
+		return this.#keys.has(this.#key(file));
 	}
 
-	indexOf(file) {
+	/**
+	 * Gets the index of a specific file in the collection.
+	 */
+	indexOf(file: string | FileData): number {
 		if (!this.#root) return -1;
-		if (!(file instanceof File) && typeof file !== 'string') throw new Error('Invalid file type');
 
-		for (const [index, value] of this.entries()) {
-			let key, absolute;
-			if (file instanceof File) {
-				key = file.relative.file;
-				absolute = false;
-			} else {
-				absolute = require('path').isAbsolute(file);
-				key = file;
-			}
-
-			if ((absolute ? value.file : value.relative.file) === key) return index;
-		}
-		return -1;
+		const key = this.#key(file);
+		return this.#files.findIndex(f => this.#key(f) === key);
 	}
 
-	find(file) {
-		if (!this.#root || !this.includes(file)) return;
-		return this[this.indexOf(file)];
+	/**
+	 * Changes the contents of the array by removing or replacing existing elements
+	 * and/or adding new elements.
+	 *
+	 * This is a direct implementation of the Array.prototype.splice() method.
+	 */
+	splice(start: number, deleteCount?: number, ...items: FileData[]): FileData[] {
+		return this.#files.splice(start, deleteCount, ...items);
 	}
 
-	append(files, sort) {
+	/**
+	 * Retrieve a file by its path or FileData reference.
+	 *
+	 * @note This intentionally overrides Array.find with a different signature,
+	 *       so @ts-ignore is used to suppress TypeScript's type incompatibility warning.
+	 */
+	find(file: string | FileData): FileData | undefined {
+		if (!this.#root) return;
+		const key = this.#key(file);
+		return this.#files.find(f => f.relative.file === key);
+	}
+
+	/**
+	 * Executes a provided function once for each file in the collection.
+	 */
+	forEach(callback: (value: FileData, index: number, array: FileData[]) => void) {
+		this.#files.forEach(callback);
+	}
+
+	/**
+	 * Append all files from another Files instance into this collection.
+	 *
+	 * @param files - A Files instance to append.
+	 * @param sort - Whether to sort after appending.
+	 */
+	append(files: FilesArray, sort?: boolean) {
 		if (!this.#root) throw new Error('Files is not configured');
 
-		const Files = require('./');
-		if (!(files instanceof Files)) throw new Error('Invalid parameters');
+		if (!(files instanceof FilesArray)) throw new Error('Invalid parameters');
 		files.forEach(file => this.push(file, false));
 		sort && this.sort();
+	}
+
+	/**
+	 * Returns an Array Iterator object with key/value pairs.
+	 */
+	entries(): IterableIterator<[number, FileData]> {
+		return this.#files.entries();
+	}
+
+	/**
+	 * Returns an Array Iterator object with the keys of the collection.
+	 */
+	keys(): IterableIterator<number> {
+		return this.#files.keys();
+	}
+
+	/**
+	 * Returns an Array Iterator object with the values of the collection.
+	 */
+	values(): IterableIterator<FileData> {
+		return this.#files.values();
+	}
+
+	[Symbol.iterator](): Iterator<FileData> {
+		return this.#files[Symbol.iterator]();
+	}
+
+	/**
+	 * Creates a new FilesArray with all elements that pass the test
+	 * implemented by the provided function.
+	 */
+	filter(callback: (value: FileData, index: number, array: FileData[]) => unknown): FilesArray {
+		const filteredArray = this.#files.filter(callback);
+		const instance = new FilesArray(this.root);
+		filteredArray.forEach(file => instance.push(file, false));
+		return instance;
+	}
+
+	/**
+	 * Creates a new array populated with the results of calling a provided function
+	 * on every element in the calling array.
+	 */
+	map<T>(callback: (value: FileData, index: number, array: FileData[]) => T): T[] {
+		return this.#files.map(callback);
 	}
 }
