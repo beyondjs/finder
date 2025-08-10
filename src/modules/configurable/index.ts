@@ -49,7 +49,7 @@ export /*bundle*/ class ConfigurableFinder extends DynamicProcessor(FilesArray) 
 		return this.#finder ? this.#finder.missing : [];
 	}
 
-	#previous?: { path: string; specs: FilterSpec };
+	#previous?: { path: string; spec: FilterSpec };
 
 	/**
 	 * Configurable finder constructor
@@ -61,11 +61,11 @@ export /*bundle*/ class ConfigurableFinder extends DynamicProcessor(FilesArray) 
 		this.#watcher = watcher;
 	}
 
-	configure(path: string, specs: FilterSpec) {
+	configure(path?: string, spec?: FilterSpec) {
 		if (this.destroyed) throw new Error('Configurable finder is destroyed');
-		if (!path && specs) throw new Error('Invalid parameters');
+		if (!path && spec) throw new Error('Invalid parameters');
 
-		const config = { path: path, specs: specs };
+		const config = { path, spec };
 		if (equal(this.#previous, config)) return;
 		this.#previous = config;
 
@@ -79,7 +79,7 @@ export /*bundle*/ class ConfigurableFinder extends DynamicProcessor(FilesArray) 
 		}
 
 		super.reset(path);
-		this.#finder = new Finder(path, specs, this.#watcher);
+		this.#finder = new Finder(path, spec, this.#watcher);
 		this._invalidate();
 	}
 

@@ -142,13 +142,13 @@ export default class Inclusion extends Files {
 			if (this.#destroyed) return;
 			if (!exists) return;
 
-			let { isDirectory, isFile } = await stat(path);
+			const stats = await stat(path);
 			if (this.#destroyed) return;
 
-			if (isDirectory()) {
+			if (stats.isDirectory()) {
 				this.#type = TYPES.DIRECTORY;
 				await this.#directory(path);
-			} else if (isFile()) {
+			} else if (stats.isFile()) {
 				this.#type = TYPES.FILE;
 				await this.#file(path);
 			}

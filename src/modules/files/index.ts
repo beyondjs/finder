@@ -114,7 +114,7 @@ export /*bundle*/ class FilesArray {
 			if (!isAbsolute(file)) return file;
 			file = new FileData(this.#root, file);
 			return file.relative.file;
-		} else if (file instanceof File) {
+		} else if (file instanceof FileData) {
 			return file.relative.file;
 		} else {
 			throw new Error('Invalid file parameter');

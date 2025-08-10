@@ -1,8 +1,10 @@
 import type { FilterSpec } from '@beyond-js/finder/types';
 import type { IDiagnostic } from '@beyond-js/finder/types';
 import { FilesArray } from '@beyond-js/finder/files';
+import Files from './files';
 import * as fs from 'fs';
 import { relative } from 'path';
+import { join } from 'path';
 
 const { readdir, stat, access } = fs.promises;
 
@@ -76,16 +78,16 @@ export default class RecursiveFinder {
 	 * @returns {Promise<object>}
 	 */
 	#readdir = async (path: string) => {
-		const output = new (require('./files'))(this.#root, this.#spec);
+		const output = new Files(this.#root, this.#spec);
 		const excludes = this.#spec.excludes;
 
 		const files = await readdir(path);
 		if (this.#destroyed) return;
 
 		for (let file of files) {
-			file = require('path').join(path, file);
+			file = join(path, file);
 
-			let { isDirectory, isFile } = await stat(file);
+			const stats = await stat(file);
 			if (this.#destroyed) return;
 
 			// Check if directory is excluded from the search
@@ -94,11 +96,11 @@ export default class RecursiveFinder {
 				return excludes.reduce((prev, exclude) => prev || relative(exclude, r) === '', false);
 			};
 
-			if (isDirectory()) {
+			if (stats.isDirectory()) {
 				// Continue the recursive search
 				!excluded(file) && output.append(await this.#readdir(file));
 				if (this.#destroyed) return;
-			} else if (isFile()) {
+			} else if (stats.isFile()) {
 				// If the file does not meet the filters criteria, it will be automatically discarded
 				!excluded(file) && output.push(file);
 			}
@@ -124,7 +126,7 @@ export default class RecursiveFinder {
 				}
 			})();
 
-			this.#files = !exists ? new (require('./files'))(this.#path, this.#spec) : await this.#readdir(this.#path);
+			this.#files = !exists ? new Files(this.#path, this.#spec) : await this.#readdir(this.#path);
 		} catch (exc) {
 			console.error(exc.stack);
 			this.#errors.push(exc.message);

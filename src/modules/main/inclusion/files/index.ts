@@ -22,10 +22,18 @@ export default class InclusionFiles extends FilesArray {
 
 	/**
 	 * Push a file to the array
-	 * @param file {object} The file object
-	 * @param sort {boolean}
+	 *
+	 * @param file {FileData | string} The file to be added to the array
+	 * If a string is provided, it will be normalized to a FileData object.
+	 * @param sort {boolean} If true, the file will be sorted in the array.
+	 * Defaults to true.
+	 *
+	 * @returns {FileData | undefined} Returns the file if it passes the filter, otherwise undefined.
+	 *
+	 * @param sort {boolean} If true, the file will be sorted in the array.
+	 * @returns {FileData | undefined} Returns the file if it passes the filter, otherwise undefined.
 	 */
-	push(file: FileData, sort = true) {
+	push(file: FileData | string, sort = true) {
 		file = this.normalize(file);
 		const check = this.#filter.check(file);
 		if (!check.passed) return;
