@@ -1,4 +1,4 @@
-import type { FilterSpec } from '@beyond-js/finder/types';
+import type { IFilterSpec } from '@beyond-js/finder/types';
 import type { IDiagnostic } from '@beyond-js/finder/types';
 import { FilesArray } from '@beyond-js/finder/files';
 import Files from './files';
@@ -26,7 +26,7 @@ export default class RecursiveFinder {
 		return this.#path;
 	}
 
-	#spec: FilterSpec;
+	#spec: IFilterSpec;
 	get spec() {
 		return this.#spec;
 	}
@@ -65,7 +65,7 @@ export default class RecursiveFinder {
 	 * @param spec {object} The finder specification (filename, extname, filter, excludes).
 	 * Includes is not used here as this class is already under an inclusion (specified in the includes).
 	 */
-	constructor(root: string, path: string, spec: FilterSpec) {
+	constructor(root: string, path: string, spec: IFilterSpec) {
 		this.#root = root;
 		this.#path = path;
 		this.#spec = spec;

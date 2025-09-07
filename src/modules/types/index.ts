@@ -5,7 +5,7 @@ export /*bundle*/ interface IDiagnostic {
 	message: string;
 }
 
-export /*bundle*/ interface FilterSpec {
+export /*bundle*/ interface IFilterSpec {
 	includes?: string[];
 	excludes?: string[];
 	filename?: string;

@@ -1,5 +1,5 @@
 import type { FileData } from '@beyond-js/file/data';
-import type { FilterSpec } from '@beyond-js/finder/types';
+import type { IFilterSpec } from '@beyond-js/finder/types';
 import { relative } from 'path';
 
 interface CheckResult {
@@ -7,27 +7,27 @@ interface CheckResult {
 	passed: boolean;
 }
 
-export class FilesFilter implements FilterSpec {
+export class FilesFilter implements IFilterSpec {
 	#root: string;
 
-	#spec: FilterSpec;
-	get includes(): FilterSpec['includes'] {
+	#spec: IFilterSpec;
+	get includes(): IFilterSpec['includes'] {
 		return this.#spec.includes;
 	}
-	get excludes(): FilterSpec['excludes'] {
+	get excludes(): IFilterSpec['excludes'] {
 		return this.#spec.excludes;
 	}
-	get filename(): FilterSpec['filename'] {
+	get filename(): IFilterSpec['filename'] {
 		return this.#spec.filename;
 	}
-	get extname(): FilterSpec['extname'] {
+	get extname(): IFilterSpec['extname'] {
 		return this.#spec.extname;
 	}
-	get filter(): FilterSpec['filter'] {
+	get filter(): IFilterSpec['filter'] {
 		return this.#spec.filter;
 	}
 
-	constructor(root: string, spec: FilterSpec) {
+	constructor(root: string, spec: IFilterSpec) {
 		this.#root = root;
 		this.#spec = spec;
 	}

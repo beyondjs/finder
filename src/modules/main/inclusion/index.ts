@@ -1,4 +1,4 @@
-import type { FilterSpec } from '@beyond-js/finder/types';
+import type { IFilterSpec } from '@beyond-js/finder/types';
 import type { IDiagnostic } from '@beyond-js/finder/types';
 import { FileData } from '@beyond-js/file/data';
 import Files from './files';
@@ -27,7 +27,7 @@ export default class Inclusion extends Files {
 		return this.#entry;
 	}
 
-	#spec: FilterSpec;
+	#spec: IFilterSpec;
 	get spec() {
 		return this.#spec;
 	}
@@ -72,9 +72,9 @@ export default class Inclusion extends Files {
 	 * @param root {string} The root of the search, required to set the files relative directory
 	 * @param entry {string} The entry in the includes specification, each entry can be a directory,
 	 * a file, or the wildcard
-	 * @param spec {FilterSpec} The finder specification
+	 * @param spec {IFilterSpec} The finder specification
 	 */
-	constructor(root: string, entry?: string, spec?: FilterSpec) {
+	constructor(root: string, entry?: string, spec?: IFilterSpec) {
 		if (typeof root !== 'string' || !entry || !spec) {
 			throw new Error('Invalid parameters, root, entry and spec are required');
 		}
@@ -95,9 +95,9 @@ export default class Inclusion extends Files {
 		await this.#directory(this.root, excludes);
 	};
 
-	#directory = async (path: string, excludes?: FilterSpec['excludes']) => {
+	#directory = async (path: string, excludes?: IFilterSpec['excludes']) => {
 		excludes = excludes ? excludes : this.#spec.excludes;
-		const filter: FilterSpec = Object.assign({}, this.#spec, { excludes });
+		const filter: IFilterSpec = Object.assign({}, this.#spec, { excludes });
 		this.#recursive = new RecursiveFinder(this.root, path, filter);
 
 		await this.#recursive.process();

@@ -5,9 +5,10 @@ BEE('http://localhost:1110', { inspect: 4000 });
 
 (async () => {
 	const { FinderCollection } = await bimport('@beyond-js/finder/collection');
-	const path = join(process.cwd(), 'files');
+
 	const finder = new FinderCollection();
-	finder.configure(path, { extensions: ['.ts'], includes: ['index.ts', 'another.ts'] });
+	const path = __dirname;
+	finder.configure(path, { extensions: ['.ts'], includes: ['*'], filename: 'module.json' });
 	await finder.ready;
 
 	console.log('Finder collection files count:', finder.size);

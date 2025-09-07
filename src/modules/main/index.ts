@@ -1,5 +1,5 @@
 import type { WatcherClient } from '@beyond-js/watchers/client';
-import type { FilterSpec, IDiagnostic } from '@beyond-js/finder/types';
+import type { IFilterSpec, IDiagnostic } from '@beyond-js/finder/types';
 import type { ListenerType } from '@beyond-js/watchers/client';
 import { DynamicProcessor } from '@beyond-js/dynamic-processor/main';
 import Listener from './listener';
@@ -23,24 +23,24 @@ export /*bundle*/ class Finder extends DynamicProcessor() {
 		return this.#path;
 	}
 
-	#spec: FilterSpec;
+	#spec: IFilterSpec;
 	get spec() {
 		return this.#spec;
 	}
 
-	get filename(): FilterSpec['filename'] {
+	get filename(): IFilterSpec['filename'] {
 		return this.#spec.filename;
 	}
 
-	get extname(): FilterSpec['extname'] {
+	get extname(): IFilterSpec['extname'] {
 		return this.#spec.extname;
 	}
 
-	get includes(): FilterSpec['includes'] {
+	get includes(): IFilterSpec['includes'] {
 		return this.#spec.includes;
 	}
 
-	get excludes(): FilterSpec['excludes'] {
+	get excludes(): IFilterSpec['excludes'] {
 		return this.#spec.excludes;
 	}
 
@@ -95,7 +95,7 @@ export /*bundle*/ class Finder extends DynamicProcessor() {
 	 *      . filter {function} Function to filter files
 	 * @param watcher {object} Files watcher to listen for file changes
 	 */
-	constructor(path: string, spec: FilterSpec, watcher: WatcherClient) {
+	constructor(path: string, spec: IFilterSpec, watcher: WatcherClient) {
 		super();
 
 		spec = Parameters(path, spec);

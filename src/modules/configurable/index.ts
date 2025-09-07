@@ -1,5 +1,5 @@
 import type { WatcherClient, ListenerType } from '@beyond-js/watchers/client';
-import type { FilterSpec } from '@beyond-js/finder/types';
+import type { IFilterSpec } from '@beyond-js/finder/types';
 import { RequireType } from '@beyond-js/dynamic-processor/main';
 import { DynamicProcessor } from '@beyond-js/dynamic-processor/main';
 import { equal } from '@beyond-js/equal/main';
@@ -53,7 +53,7 @@ export /*bundle*/ class ConfigurableFinder extends DynamicProcessor(FilesArray) 
 		return this.#finder ? this.#finder.missing : [];
 	}
 
-	#previous?: { path: string; spec: FilterSpec };
+	#previous?: { path: string; spec: IFilterSpec };
 
 	/**
 	 * Configurable finder constructor
@@ -65,7 +65,7 @@ export /*bundle*/ class ConfigurableFinder extends DynamicProcessor(FilesArray) 
 		this.#watcher = watcher;
 	}
 
-	configure(path?: string, spec?: FilterSpec) {
+	configure(path?: string, spec?: IFilterSpec) {
 		if (this.destroyed) throw new Error('Configurable finder is destroyed');
 		if (!path && spec) throw new Error('Invalid parameters');
 

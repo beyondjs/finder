@@ -5,8 +5,8 @@ BEE('http://localhost:1110', { inspect: 4000 });
 
 (async () => {
 	const { Finder } = await bimport('@beyond-js/finder/main');
-	const path = join(process.cwd(), 'files');
-	const finder = new Finder(path, { extensions: ['.ts'], includes: ['index.ts', 'another.ts'] });
+	const path = join(__dirname, 'files');
+	const finder = new Finder(path, { extensions: ['.ts'], includes: ['index.ts', 'shouldnt-exist.ts'] });
 	await finder.ready;
 
 	console.log('Finder files count:', finder.files.length);

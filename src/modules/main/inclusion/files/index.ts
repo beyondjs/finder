@@ -1,5 +1,5 @@
 import type { FileData } from '@beyond-js/file/data';
-import type { FilterSpec } from '@beyond-js/finder/types';
+import type { IFilterSpec } from '@beyond-js/finder/types';
 import { FilesArray } from '@beyond-js/finder/files';
 import { FilesFilter } from './filter';
 
@@ -11,7 +11,7 @@ export default class InclusionFiles extends FilesArray {
 	// complies with the specified filters
 	#filter: FilesFilter;
 
-	constructor(root: string, spec?: FilterSpec) {
+	constructor(root: string, spec?: IFilterSpec) {
 		if (typeof root !== 'string' || !spec) {
 			throw new Error('Invalid parameters, root and spec are required');
 		}

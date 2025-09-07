@@ -1,4 +1,4 @@
-import type { FilterSpec } from '@beyond-js/finder/types';
+import type { IFilterSpec } from '@beyond-js/finder/types';
 import type Inclusion from './inclusion';
 
 /**
@@ -8,7 +8,7 @@ import type Inclusion from './inclusion';
  * @param inclusions
  * @returns {function*}
  */
-export default function (includes: FilterSpec['includes'], inclusions: Map<string, Inclusion>) {
+export default function (includes: IFilterSpec['includes'], inclusions: Map<string, Inclusion>) {
 	return function* () {
 		if (!inclusions) return;
 
