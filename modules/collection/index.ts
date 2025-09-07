@@ -61,7 +61,7 @@ export /*bundle*/ class FinderCollection<ItemType = FinderFile> extends DynamicP
 	 * @param Item {object} The collection item
 	 * @param watcher {WatcherClient} The client file watchers
 	 */
-	constructor(Item: any, watcher?: WatcherClient) {
+	constructor({ Item, watcher }: { Item?: any; watcher?: WatcherClient } = {}) {
 		super();
 
 		this.#Item = Item ? Item : FinderFile;
