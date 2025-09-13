@@ -80,11 +80,9 @@ export /*bundle*/ class FinderCollection<ItemType = FinderFile> extends DynamicP
 	 *
 	 * @param file {object | string}
 	 */
-	has(file: string) {
+	has(file: string | FileData): boolean {
 		if (!this.path) return false;
-		if (super.has(file)) return super.has(file);
 
-		if (isAbsolute(file) && file.slice(0, this.path.length) !== this.path) return false;
 		const key = this.#normalize(this.#finder.normalize(file));
 		return super.has(key);
 	}
@@ -94,13 +92,10 @@ export /*bundle*/ class FinderCollection<ItemType = FinderFile> extends DynamicP
 	 *
 	 * @param file {object | string}
 	 */
-	get(file: string | FileData) {
+	get(file: string | FileData): ItemType | undefined {
 		if (!this.path) return;
 
 		const key = this.#normalize(this.#finder.normalize(file));
-		if (super.has(key)) return super.get(key);
-
-		if (isAbsolute(key) && key.slice(0, this.path.length) !== this.path) return false;
 		return super.get(key);
 	}
 

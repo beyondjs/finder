@@ -16,4 +16,8 @@ BEE('http://localhost:1110', { inspect: 4000 });
 		'Finder collection files found:',
 		[...finder.values()].map(file => file.relative.file)
 	);
+
+	const expected = 'dir-a/mod-1/module.json';
+	const found = finder.has(expected);
+	console.log(`File ${expected} found:`, found);
 })().catch(exc => console.error(exc.stack));
