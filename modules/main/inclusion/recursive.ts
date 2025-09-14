@@ -116,7 +116,7 @@ export default class RecursiveFinder {
 
 		this.#processing = true;
 		try {
-			const exists = (async () => {
+			const exists = await (async () => {
 				try {
 					await access(this.#path);
 					return true;

@@ -129,7 +129,6 @@ export default class Inclusion extends Files {
 
 			const path = join(this.root, this.#entry);
 			const exists = await (async () => {
-				// await fs.exists(path);
 				try {
 					await access(path);
 					return true;
