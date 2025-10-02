@@ -92,7 +92,7 @@ export /*bundle*/ class FinderCollection<ItemType extends IFinderItemCtor> exten
 	 *
 	 * @param file {object | string}
 	 */
-	get(file: string | FileData): ItemType | undefined {
+	get(file: string | FileData): InstanceType<ItemType> | undefined {
 		if (!this.path) return;
 
 		const key = this.#normalize(this.#finder.normalize(file));
@@ -126,10 +126,10 @@ export /*bundle*/ class FinderCollection<ItemType extends IFinderItemCtor> exten
 	}
 
 	// forEach must respect the order of the files arranged by the finder
-	forEach(callback: (value: ItemType, key: string, map: this) => void, thisArg?: any): void {
+	forEach(callback: (value: InstanceType<ItemType>, key: string, map: this) => void, thisArg?: any): void {
 		for (const key of this.#ordered) {
 			// super.get(key)! si estás seguro de que existe
-			const value = super.get(key) as ItemType;
+			const value = super.get(key) as InstanceType<ItemType>;
 			callback.call(thisArg, value, key, this);
 		}
 	}
@@ -138,9 +138,9 @@ export /*bundle*/ class FinderCollection<ItemType extends IFinderItemCtor> exten
 		return this.entries();
 	};
 
-	*entries(): ReturnType<Map<string, ItemType>['entries']> {
+	*entries(): ReturnType<Map<string, InstanceType<ItemType>>['entries']> {
 		for (const key of this.#ordered) {
-			const value: ItemType = super.get(key);
+			const value: InstanceType<ItemType> = super.get(key);
 			yield [key, value];
 		}
 	}
@@ -151,8 +151,8 @@ export /*bundle*/ class FinderCollection<ItemType extends IFinderItemCtor> exten
 		return keys.values();
 	}
 
-	values(): ReturnType<Map<string, ItemType>['values']> {
-		const values: ItemType[] = [];
+	values(): ReturnType<Map<string, InstanceType<ItemType>>['values']> {
+		const values: InstanceType<ItemType>[] = [];
 		this.#ordered.forEach(key => values.push(super.get(key)));
 		return values.values();
 	}
