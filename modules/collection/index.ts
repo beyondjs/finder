@@ -1,18 +1,18 @@
 import type { ListenerType, WatcherClient } from '@beyond-js/watchers/client';
 import type { FileData } from '@beyond-js/file/data';
 import type { IFilterSpec } from '@beyond-js/finder/types';
+import type { IFinderItemCtor } from './file';
 import { ConfigurableFinder } from '@beyond-js/finder/configurable';
 import { DynamicProcessor } from '@beyond-js/dynamic-processor/main';
 import { FinderFile } from './file';
-import { isAbsolute } from 'path';
 
-export /*bundle*/ class FinderCollection<ItemType = FinderFile> extends DynamicProcessor(Map<string, any>) {
+export /*bundle*/ class FinderCollection<ItemType extends IFinderItemCtor> extends DynamicProcessor(Map<string, any>) {
 	get dp() {
 		return 'utils.finder-collection';
 	}
 
 	#finder: ConfigurableFinder;
-	#Item: any;
+	#Item: IFinderItemCtor;
 	get Item() {
 		return this.#Item;
 	}

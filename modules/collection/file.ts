@@ -2,7 +2,11 @@ import type { FileData } from '@beyond-js/file/data';
 import type { FinderCollection } from './';
 import { DynamicFile } from '@beyond-js/file/dynamic';
 
-export /*bnundle*/ class FinderFile extends DynamicFile {
+export /*bundle*/ interface IFinderItemCtor {
+	new (finder: FinderCollection<any>, file: FileData): any;
+}
+
+export /*bundle*/ class FinderFile extends DynamicFile {
 	get dp() {
 		return 'utils.finder-file';
 	}
