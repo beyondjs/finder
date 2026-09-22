@@ -77,6 +77,10 @@ export default class RecursiveFinder {
 	 * @param path {string} The directory where to search for the files
 	 * @returns {Promise<object>}
 	 */
+	// The directories already entered, by device and inode: a symbolic link that leads back into the tree
+	// would otherwise be followed forever
+	#visited: Set<string> = new Set();
+
 	#readdir = async (path: string) => {
 		const output = new Files(this.#root, this.#spec);
 		const excludes = this.#spec.excludes;
@@ -89,6 +93,11 @@ export default class RecursiveFinder {
 
 			const stats = await stat(file);
 			if (this.#destroyed) return;
+			if (stats.isDirectory()) {
+				const identity = `${stats.dev}:${stats.ino}`;
+				if (this.#visited.has(identity)) continue;
+				this.#visited.add(identity);
+			}
 
 			// Check if directory is excluded from the search
 			const excluded = (file: string) => {
@@ -116,6 +125,9 @@ export default class RecursiveFinder {
 
 		this.#processing = true;
 		try {
+			const own = await stat(this.#path).catch(() => void 0);
+			own?.isDirectory() && this.#visited.add(`${own.dev}:${own.ino}`);
+
 			const exists = await (async () => {
 				try {
 					await access(this.#path);
@@ -129,7 +141,7 @@ export default class RecursiveFinder {
 			this.#files = !exists ? new Files(this.#path, this.#spec) : await this.#readdir(this.#path);
 		} catch (exc) {
 			console.error(exc.stack);
-			this.#errors.push(exc.message);
+			this.#errors.push({ code: 'READ_ERROR', message: exc.message });
 			this.#files?.clear();
 		} finally {
 			this.#processing = false;

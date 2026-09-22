@@ -51,6 +51,11 @@ export /*bundle*/ class Finder extends DynamicProcessor() {
 		return this.#listener?.listener;
 	}
 
+	/** Whether the files are being followed through the watcher: false without one, or when it failed */
+	get watching() {
+		return !!this.#listener?.watching;
+	}
+
 	get [Symbol.iterator]() {
 		return Iterator(this.#spec.includes, this.#inclusions);
 	}
@@ -106,13 +111,16 @@ export /*bundle*/ class Finder extends DynamicProcessor() {
 
 		this.#inclusions = new Map();
 
+		// An include that is not a string is reported and left out, so that nothing later looks it up
+		spec.includes = spec.includes.filter(entry => {
+			if (typeof entry === 'string') return true;
+			const code = 'INCLUSION_NOT_A_STRING';
+			const message = `Inclusion "${entry}" is not a string`;
+			this.#warnings.push({ code, message });
+			return false;
+		});
+
 		for (const entry of spec.includes) {
-			if (typeof entry !== 'string') {
-				const code = 'INCLUSION_NOT_A_STRING';
-				const message = `Inclusion "${entry}" is not a string`;
-				this.#warnings.push({ code, message });
-				continue;
-			}
 			const inclusion = new Inclusion(path, entry, spec);
 			this.#inclusions.set(entry, inclusion);
 		}
@@ -120,8 +128,13 @@ export /*bundle*/ class Finder extends DynamicProcessor() {
 
 	#timer: NodeJS.Timeout | undefined;
 
+	/**
+	 * Defers `change` by ten milliseconds so that a burst announces once. The last announcement of a
+	 * destruction is delivered at once instead, and supersedes a deferred one: nothing is announced by a
+	 * finder after its `destroy()` returned.
+	 */
 	emit(event: string, ...params: any[]) {
-		if (event === 'change') {
+		if (event === 'change' && !this.destroyed) {
 			clearTimeout(this.#timer);
 			this.#timer = setTimeout(() => this._events.emit(event, ...params), 10);
 			return;
@@ -138,7 +151,7 @@ export /*bundle*/ class Finder extends DynamicProcessor() {
 	}
 
 	destroy() {
-		// A change announcement is deferred, so a finder destroyed within that window must not emit
+		// A deferred announcement is superseded by the one the destruction delivers at once
 		clearTimeout(this.#timer);
 		this.#timer = void 0;
 

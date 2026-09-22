@@ -146,7 +146,10 @@ export /*bundle*/ class FilesArray {
 	 * This is a direct implementation of the Array.prototype.splice() method.
 	 */
 	splice(start: number, deleteCount?: number, ...items: FileData[]): FileData[] {
-		return this.#files.splice(start, deleteCount, ...items);
+		const removed = deleteCount === void 0 ? this.#files.splice(start) : this.#files.splice(start, deleteCount, ...items);
+		removed.forEach(file => this.#keys.delete(file.relative.file));
+		items.forEach(file => this.#keys.add(file.relative.file));
+		return removed;
 	}
 
 	/**

@@ -153,7 +153,7 @@ export default class Inclusion extends Files {
 			}
 		} catch (exc) {
 			console.error(exc.stack);
-			this.#errors.push(exc.message);
+			this.#errors.push({ code: 'INCLUSION_ERROR', message: exc.message });
 		} finally {
 			this.#processing = false;
 			this.#processed = true;

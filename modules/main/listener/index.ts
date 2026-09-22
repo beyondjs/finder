@@ -17,6 +17,12 @@ export default class Listener {
 		return this.#destroyed;
 	}
 
+	/** Whether the listener is registered in the service: false without a watcher, or after a failure */
+	#watching = false;
+	get watching() {
+		return this.#watching;
+	}
+
 	#createListener = () => {
 		const { watcher, spec, path } = this.#finder;
 		if (!watcher) return;
@@ -37,7 +43,15 @@ export default class Listener {
 		this.#listener.on('unlink', this.#unlink);
 		this.#listener.on('change', this.#change);
 
-		this.#listener.listen().catch((exc: Error) => console.error(exc.stack));
+		this.#listener
+			.listen()
+			.then(() => (this.#watching = true))
+			.catch((exc: Error) => {
+				// The finder still answers its discovery; that it is not being followed is reported, not hidden
+				const message = `The finder of "${path}" is not watching its files: ${exc.message}`;
+				this.#finder.warnings.push({ code: 'LISTENER_FAILED', message });
+				console.error(message);
+			});
 	};
 
 	constructor(finder: Finder, inclusions: Map<string, Inclusion>) {
@@ -81,6 +95,10 @@ export default class Listener {
 
 	destroy() {
 		this.#destroyed = true;
-		this.#listener.destroy();
+		this.#watching = false;
+
+		// A watcher client destroyed before the finder has already released the listeners of its watcher
+		if (!this.#listener || this.#listener.destroyed) return;
+		this.#listener.destroy().catch((exc: Error) => console.error(exc.stack));
 	}
 }

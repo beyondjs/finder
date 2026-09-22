@@ -65,26 +65,33 @@ export /*bundle*/ class ConfigurableFinder extends DynamicProcessor(FilesArray) 
 		this.#watcher = watcher;
 	}
 
-	configure(path?: string, spec?: IFilterSpec) {
+	/**
+	 * Configures the search. An equal configuration changes nothing; a different one replaces the finder
+	 * and invalidates this object, whose readiness then waits for the new discovery.
+	 *
+	 * @returns {boolean} Whether the configuration changed
+	 */
+	configure(path?: string, spec?: IFilterSpec): boolean {
 		if (this.destroyed) throw new Error('Configurable finder is destroyed');
 		if (!path && spec) throw new Error('Invalid parameters');
 
-		const config = { path, spec };
-		if (equal(this.#previous, config)) return;
+		// A copy is kept: a caller that mutates the object it configured with must not defeat the comparison
+		const config = { path, spec: spec ? Object.assign({}, spec) : spec };
+		if (equal(this.#previous, config)) return false;
 		this.#previous = config;
 
-		// The configuration has been changed.
-		// The .create() method is responsible for eliminating the previous finder if it exists.
+		// The previous finder, if any, is replaced
 		this.#finder?.destroy();
 		this.#finder = void 0;
 		if (!path) {
 			this._invalidate();
-			return;
+			return true;
 		}
 
 		super.reset(path);
 		this.#finder = new Finder(path, spec, this.#watcher);
 		this._invalidate();
+		return true;
 	}
 
 	_prepared(require: RequireType) {

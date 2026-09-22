@@ -76,27 +76,35 @@ export /*bundle*/ class FinderCollection<ItemType extends IFinderItemCtor> exten
 	}
 
 	/**
-	 * Access to the .has(key) method of the items map
+	 * The key of an item: a key of the collection given as it is, or a file (a path or its data) reduced to
+	 * the key it belongs to, which is its relative directory when the collection is filtered by filename
+	 */
+	#key(file: string | FileData): string {
+		if (typeof file === 'string') {
+			const key = file.replace(/\\/g, '/').replace(/\/$/, '');
+			if (super.has(key)) return key;
+		}
+		return this.#normalize(this.#finder.normalize(file));
+	}
+
+	/**
+	 * Whether an item exists, by its key or by a file that belongs to it
 	 *
 	 * @param file {object | string}
 	 */
 	has(file: string | FileData): boolean {
 		if (!this.path) return false;
-
-		const key = this.#normalize(this.#finder.normalize(file));
-		return super.has(key);
+		return super.has(this.#key(file));
 	}
 
 	/**
-	 * Access to the .get(key) method of the items map
+	 * The item of a key, or of a file that belongs to it
 	 *
 	 * @param file {object | string}
 	 */
 	get(file: string | FileData): InstanceType<ItemType> | undefined {
 		if (!this.path) return;
-
-		const key = this.#normalize(this.#finder.normalize(file));
-		return super.get(key);
+		return super.get(this.#key(file));
 	}
 
 	_process() {
@@ -106,7 +114,8 @@ export /*bundle*/ class FinderCollection<ItemType extends IFinderItemCtor> exten
 			const key = this.#normalize(file);
 			ordered.push(key);
 
-			let item = this.has(key) ? this.get(key) : new this.#Item(this, file);
+			// The key is already normalized: looked up directly, so an item keeps its identity across processings
+			const item = super.has(key) ? super.get(key) : new this.#Item(this, file);
 			updated.set(key, item);
 		});
 
@@ -121,8 +130,12 @@ export /*bundle*/ class FinderCollection<ItemType extends IFinderItemCtor> exten
 		this.#ordered = ordered;
 	}
 
+	/**
+	 * Configures the search. A changed configuration invalidates the collection, so its readiness waits
+	 * for the items of the new discovery.
+	 */
 	configure(path?: string, spec?: IFilterSpec) {
-		this.#finder.configure(path, spec);
+		this.#finder.configure(path, spec) && this._invalidate();
 	}
 
 	// forEach must respect the order of the files arranged by the finder
@@ -158,8 +171,10 @@ export /*bundle*/ class FinderCollection<ItemType extends IFinderItemCtor> exten
 	}
 
 	clear() {
+		// The items are destroyed before the order is forgotten: the traversal reads the order
+		const items = this.#ordered.map(key => super.get(key));
 		this.#ordered.length = 0;
-		this.forEach(item => (item as any).destroy?.());
+		items.forEach(item => (item as any)?.destroy?.());
 		return super.clear();
 	}
 

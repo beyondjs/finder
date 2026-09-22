@@ -9,8 +9,6 @@ import type { IFilterSpec } from '@beyond-js/finder/types';
 export default function Parameters(path: string, specs: IFilterSpec): IFilterSpec {
 	'use strict';
 
-	if (!path && !specs) return {};
-
 	specs = specs ? Object.assign({}, specs) : {};
 	specs.extname = typeof specs.extname === 'string' ? [specs.extname] : specs.extname;
 
@@ -26,8 +24,9 @@ export default function Parameters(path: string, specs: IFilterSpec): IFilterSpe
 		throw new Error('Excludes specification must be an array');
 	}
 
-	specs.includes = specs.includes ? specs.includes : ['*'];
-	specs.excludes = specs.excludes ? specs.excludes : [];
+	// The arrays are copied: the finder keeps them, and a caller that mutates its own must not change it
+	specs.includes = specs.includes ? specs.includes.slice() : ['*'];
+	specs.excludes = specs.excludes ? specs.excludes.slice() : [];
 
 	return specs;
 }

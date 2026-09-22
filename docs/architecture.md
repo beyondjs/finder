@@ -1,106 +1,70 @@
 # Finder architecture and usage
 
-Finder discovers filesystem entries and presents them as ordered file metadata or long-lived collection items. It composes the external DynamicProcessor lifecycle with FileData/DynamicFile and an optional WatcherClient. It does not create a watcher service, read every file's contents, compile modules or implement HMR.
+Finder discovers filesystem entries and presents them as ordered file metadata or as long-lived collection items. It composes the Dynamic Processor lifecycle with `FileData`, `DynamicFile` and an optional `WatcherClient`. It does not create a watcher service, read every file's content, compile modules or apply updates.
 
 ## Public modules
 
-[package.json](../package.json) selects `modules` as the Beyond module root. Each public module has a TS bundle manifest; internal directories are not additional public imports.
+[package.json](../package.json) selects `modules` as the Beyond module root. Each public module has a manifest; internal directories are not additional public imports.
 
 | Public import | API and implementation |
 | --- | --- |
-| `@beyond-js/finder/main` | [Finder](../modules/main/index.ts), a DynamicProcessor with fixed search configuration |
-| `@beyond-js/finder/configurable` | [ConfigurableFinder](../modules/configurable/index.ts), DynamicProcessor over FilesArray, owns/replaces a Finder |
-| `@beyond-js/finder/collection` | [FinderCollection, FinderFile, IFinderItemCtor](../modules/collection/index.ts); collection items are created from file metadata |
-| `@beyond-js/finder/files` | [FilesArray](../modules/files/index.ts), an iterable wrapper around a private array and relative-path Set; it does **not** extend Array |
+| `@beyond-js/finder/main` | [Finder](../modules/main/index.ts), a Dynamic Processor with a fixed search configuration |
+| `@beyond-js/finder/configurable` | [ConfigurableFinder](../modules/configurable/index.ts), a Dynamic Processor over `FilesArray` that owns and replaces a Finder |
+| `@beyond-js/finder/collection` | [FinderCollection, FinderFile, IFinderItemCtor](../modules/collection/index.ts); items created from file metadata |
+| `@beyond-js/finder/files` | [FilesArray](../modules/files/index.ts), an ordered set of `FileData` keyed by relative path; it does not extend `Array` |
 | `@beyond-js/finder/types` | [IFilterSpec, IDiagnostic](../modules/types/index.ts) |
 
 ## Search configuration
 
-`new Finder(path, spec, watcher)` uses a root string, filter object and optional-at-runtime WatcherClient. The TypeScript constructor currently declares the watcher argument without `?`; passing `undefined` supplies an unwatched search. A source checkout must first be compiled/resolved as Beyond modules; it is not a plain Node root entrypoint.
-
-```ts
-import { Finder } from '@beyond-js/finder/main';
-
-const finder = new Finder(rootPath, {
-    includes: ['src'],
-    excludes: ['src/generated'],
-    extname: ['.ts']
-}, watcher);
-await finder.ready;
-const paths = [...finder].map(file => file.relative.file);
-const diagnostics = finder.errors;
-```
-
-Here `rootPath` and `watcher` are supplied by the application; readiness belongs to DynamicProcessor and must be followed by diagnostics checks. Before using unwatched search cleanup, address the [lifecycle limitation](#lifecycle-and-error-boundaries) below.
-
-[Parameters](../modules/main/parameters.ts) shallow-copies the filter object, defaults includes to `['*']` and excludes to `[]`, and converts a string extname into an array. filename must be a string; includes/excludes must be arrays. It does not deeply validate entries, copy nested arrays, enforce root containment or parse globs.
+`new Finder(path, spec, watcher?)` takes the root, the filter and an optional `WatcherClient`. [Parameters](../modules/main/parameters.ts) copies the filter and its arrays, defaults `includes` to `['*']` and `excludes` to `[]`, converts a string `extname` to an array and validates types: the root must be a string, `filename` a string, `includes` and `excludes` arrays. An include that is not a string is reported as the warning `INCLUSION_NOT_A_STRING` and left out.
 
 | Filter | Exact meaning |
 | --- | --- |
-| includes | Literal file/directory paths relative to root; only the exact string `*` means recursive root discovery. `*.ts` and `src/**/*.ts` are not supported glob patterns. |
-| excludes | Literal relative paths/subtrees. Directory traversal skips exact excluded directories; file filtering rejects descendants through path-relative checks. |
-| filename | Exact basename match, such as `module.json`. |
-| extname | Exact extension membership including the dot, such as `.ts`; the key is `extname`, not `extensions`. |
-| filter | Synchronous predicate receiving FileData; affects discovery/add filtering but is not sent to Watchers. |
+| `includes` | Literal file or directory paths relative to the root, in the order the results follow. Only the exact string `*` means recursive discovery from the root; `*.ts` and `src/**` are not patterns. |
+| `excludes` | Literal relative paths. A directory is not entered; a file is rejected; descendants of either are rejected. |
+| `filename` | Exact basename, such as `module.json`. |
+| `extname` | Exact extension including the dot, one or several. |
+| `filter` | A synchronous predicate on `FileData`, applied at discovery and on additions; it is not sent to the watcher. |
 
-An explicit file still passes the same filename/extname/custom/exclusion filters. An absent or fully filtered inclusion appears in `missing`; missing is not necessarily a filesystem error. Inclusion errors are exposed separately.
+An explicit file still passes the same filters. An include that is absent or fully filtered appears in `missing`; that is not an error. A root that does not exist discovers nothing and reports nothing: the wildcard is missing.
 
 ## Initial discovery and order
 
-Finder owns one [Inclusion](../modules/main/inclusion/index.ts) per include string. `_begin()` constructs its watcher Listener first, then processes inclusions concurrently. A literal path is checked with access/stat; directories use [RecursiveFinder](../modules/main/inclusion/recursive.ts), files create FileData directly. Wildcard traversal excludes other explicit includes so they can occupy their own positions in the result.
+Finder owns one [Inclusion](../modules/main/inclusion/index.ts) per include. `_begin()` creates the watcher listener when there is a watcher, then processes every inclusion concurrently. A literal path is checked with `access` and `stat`: a directory is walked by [RecursiveFinder](../modules/main/inclusion/recursive.ts), a file becomes one `FileData`. The wildcard walks the root and excludes the other explicit includes, so each occupies its own position.
 
-RecursiveFinder uses readdir/stat and follows directory results recursively. It has no symlink visited-set or containment boundary. Async filesystem calls are not cancelled; destroy sets flags checked after awaits. A caught directory error prevents its accumulated result from being appended to the inclusion.
+The recursive walk uses `readdir` and `stat`, follows directory results and records the device and inode of every directory it enters, so a symbolic link that leads back into the tree ends the walk there instead of continuing forever. It does not otherwise treat links specially. A read error is the diagnostic `READ_ERROR` of the inclusion, `INCLUSION_ERROR` for a failure of the inclusion itself; diagnostics are `{ code, message }`.
 
-InclusionFiles applies [FilesFilter](../modules/main/inclusion/files/filter.ts) on insertion. Files within each inclusion are sorted by relative path. Finder iteration follows configured include order and deduplicates relative file keys across inclusions. `files` constructs a new aggregated FilesArray and freezes its outer object; private mutable collections remain mutable through its methods. `length` sums inclusion lengths and can count overlapping matches more than iteration does.
+Files within an inclusion are sorted by relative path. Iterating the finder follows include order and skips a relative path already yielded by an earlier inclusion; `length` sums the inclusions and can count an overlap twice; `files` builds a frozen aggregate `FilesArray` in the same order.
 
-The public getters expose path/spec/filename/extname/includes/excludes, watcher/listener, errors/warnings/missing, files and length. Mutating the exposed spec or includes after construction does not rebuild the inclusion map.
+Errors and warnings of a finder are `{ code, message }` diagnostics. `errors` aggregates the inclusions'; `warnings` holds `INCLUSION_NOT_A_STRING` and `LISTENER_FAILED`.
 
 ## Watch events and invalidation
 
-[Listener](../modules/main/listener/index.ts) uses an already supplied WatcherClient. It creates a filtered listener under Finder's path, translating wildcard includes to no includes restriction. It subscribes before starting its initial asynchronous scan; watcher listener startup is fire-and-forget with logged errors, so `finder.ready` does not prove subscription or underlying chokidar readiness.
+[Listener](../modules/main/listener/index.ts) uses the supplied `WatcherClient` to create a listener under the root, filtered by the finder's includes (none for the wildcard), excludes, filename and extension. It subscribes before the initial discovery starts and registers the listener without blocking `ready`: `watching` becomes true when the registration succeeded, and a registration that fails is the warning `LISTENER_FAILED` on the finder, reported once on the console, with discovery unaffected.
 
-- `add`: insert the file into matching inclusions; invalidate the Finder if membership changed after initial processing.
-- `unlink`: delete the file from inclusions and similarly invalidate.
-- `change`: emit `file.change` with FileData when processed. This does not rebuild membership or re-evaluate the custom predicate.
-- Finder's own `change` emission is debounced by ten milliseconds; other events are immediate through its DynamicProcessor event emitter.
+- `add`: the file is inserted into the inclusions it belongs to; the finder is invalidated when the membership changed.
+- `unlink`: the file is removed; the finder is invalidated when the membership changed.
+- `change`: `file.change` is emitted with the `FileData` of a member. Membership is not re-evaluated.
+- The finder's own `change` is deferred by ten milliseconds so a burst announces once. The last announcement of a destruction is delivered at once and supersedes a pending one, so nothing is announced after `destroy()` returns.
 
-A change event is not a compiler rebuild or runtime patch. Packages uses FinderCollection for module manifests and processor inputs: custom items interpret discovered manifests; DynamicFile-based items are intended to track contents through the shared listener, subject to the dependency compatibility limitation below. Passing no watcher keeps discovery separate from live updates. These consumer roles do not require this repository to exist beside Packages.
+A change of the finder is not a rebuild: it tells whoever required the finder that the set of files changed.
 
 ## Reconfiguration and collection items
 
-ConfigurableFinder owns a fixed watcher reference and a replaceable Finder. `configure(path, spec)` compares configuration with the previous object using `@beyond-js/equal`, destroys the old Finder, resets FilesArray for a new path, and invalidates. `configure()` disables discovery; the old array clears during its next process, not immediately in that branch. `_prepared` requires the Finder and `_process` copies its files. The previous configuration stores references, so mutating the same filter object can defeat change detection.
+`ConfigurableFinder` owns a watcher reference and a replaceable Finder. `configure(path, spec)` compares a copy of the configuration with the previous one using `@beyond-js/equal`, and returns `false` when they are equal; otherwise it destroys the previous finder, resets its own array to the new root, creates the new finder, invalidates itself and returns `true`. `configure()` with no path disables discovery. `_prepared` requires the finder and `_process` copies its files, so readiness waits for the new discovery.
 
-```ts
-import { FinderCollection } from '@beyond-js/finder/collection';
+`FinderCollection` extends `DynamicProcessor(Map)`, registers a `ConfigurableFinder` as its child and maps each discovered file to an item: `new Item(collection, file)`, `FinderFile` by default, which is a `DynamicFile` sharing the collection's listener. Keys are relative paths, or relative directories when `filename` filters, with `/` separators. `has(x)` and `get(x)` accept a key, a relative or absolute path of a file, or a `FileData`. `configure()` invalidates the collection when the configuration changed, so `ready` waits for the items of the new discovery.
 
-const manifests = new FinderCollection({ Item: ManifestItem, watcher });
-manifests.configure(rootPath, { filename: 'module.json' });
-await manifests.ready;
-```
+`_process` reuses the item at an existing key, creates items for new keys, destroys the items whose keys are gone, and keeps `ordered`, which `forEach`, `entries`, `keys`, `values` and iteration follow. `clear()` destroys every item and then empties the map; `destroy()` destroys the processor, the items and the finder. An item that implements `destroy()` is destroyed by the collection; the collection owns its items.
 
-`ManifestItem` must implement `new (collection, fileData)` and may implement destroy. The default [FinderFile](../modules/collection/file.ts) extends external DynamicFile with `{file, listener: collection.listener}`. The selected File dependency source (`@beyond-js/file/dynamic`, internal `modules/dynamic/listener.ts`) currently requires both watcher and listener before subscribing. [FinderFile](../modules/collection/file.ts) passes only file and listener, so this source combination does not subscribe for content invalidation. Finder still emits file.change independently. A published dependency version may differ; verify the resolved File implementation before promising live default-item contents. The constructor is one options object, not positional `(watcher, Item)` arguments. FinderCollection owns a ConfigurableFinder through DynamicProcessor.setup; it does not extend ConfigurableFinder.
+## FilesArray
 
-Keys use relative file paths normally, or relative directory names when filename is specified; separators normalize to `/`. `ordered`, forEach, entries, keys, values and iteration follow finder order. `_process` reuses items at matching keys, creates new ones and destroys removed items. The current reuse lookup passes an already normalized directory key back through filename-based normalization, which can move it to its parent; verify stable item reuse for filename-filtered collections before relying on identity preservation.
+`FilesArray` keeps `FileData` in insertion or sorted order with a set of relative keys for uniqueness. `push(file, sort = true)` normalizes a string or `FileData`, refuses a duplicate by returning `undefined`, and sorts unless told not to; `delete`, `includes`, `indexOf`, `find` take a path or `FileData`; `splice` maintains the key set; `filter` returns a new `FilesArray`, `map` an array; `sort()` sorts in place by relative path and returns the backing array. `normalize` throws before the array is configured with a root.
 
-## FilesArray operations
+## Lifecycle
 
-FilesArray provides root/length, normalization, push/delete/clear/reset, includes/indexOf/find, append/sort, iteration, entries/keys/values, forEach/map/filter and splice. Relative string keys are compared literally for lookup, while push normalizes through FileData; use canonical relative paths consistently. `find` takes a path or FileData, not an Array predicate. `push` returns FileData or undefined on duplicate, not a numeric length. `filter` returns a new FilesArray; map returns an ordinary array.
+Finder's `destroy()` cancels the deferred announcement, destroys the processor (whose last `change` is delivered at once), releases the listener when there is one and its watcher client has not already released it, and destroys the inclusions, which cancel a walk in progress. It is safe without a watcher. A collection's `destroy()` reaches its items and its finder.
 
-`splice` changes the private array without updating the uniqueness Set, so it can desynchronize includes/indexOf/find and later insertion. `sort()` returns the actual backing array, also permitting mutation outside the Set. Prefer the dedicated operations and repair these invariants before treating arbitrary mutation as supported.
+## Build and validation
 
-## Lifecycle and error boundaries
-
-- Finder.destroy calls DynamicProcessor.destroy, Listener.destroy and inclusion destruction. Listener exists even without a WatcherClient, but its destroy unconditionally calls its absent underlying listener. Unwatched teardown can throw; fix this guard before depending on cleanup or reconfiguration.
-- The debounced change timer is not cleared on destroy. Shutdown can therefore leave a late callback. No event replay bridges a watcher startup gap.
-- FinderCollection.clear empties `ordered` before using its overridden forEach to destroy items; that traversal sees no keys. The default destroy path consequently does not guarantee item resources are released. Removed-item cleanup during normal `_process` uses the earlier order and is a distinct path.
-- Non-string includes produce warnings but remain in the includes array; files/iterator subsequently look up missing inclusion objects. Invalid arrays are not a supported soft-warning-only configuration. Calling Finder with both path and spec absent returns an incomplete normalized object and fails later.
-- IDiagnostic specifies `{code, message}`, but recursive/inclusion catches push exception message strings. Consumers should not assume every current error matches the declared shape. `_begin` catches aggregate rejection and logs it; readiness alone is not validity.
-- FilesFilter computes path relationships, not glob matches or a security sandbox. Configure trusted roots/includes and define symlink/permission behavior explicitly for untrusted workspaces.
-
-## Build and verification contracts
-
-[beyond.json](../beyond.json) selects the package. Node and node-ts distributions use implementation bundle ports 1110/1111; module tsconfig files select Node types and esnext. No root npm scripts or test runner configuration are supplied. The [publish workflow](../.github/workflows/publish.yml) builds an `npm` distribution although this manifest declares only node/node-ts; reconcile that release contract before using the workflow. It also installs floating `beyond@latest`, unlike the Node 18 devcontainer's older pinned Beyond.
-
-[Finder](../tests/test-finder/index.js), [invalid directory](../tests/test-invalid-dir/index.js) and [collection](../tests/test-collection/index.js) examples use legacy BEE and print results. Their `extensions` filter key is stale; they are not complete assertion/cleanup tests. Modern BEE Node compatibility requires supplying the utility dependencies' expected runtime and any watcher service; Node loading alone does not start IPC.
-
-Meaningful verification includes literal/wildcard order and overlaps, filename/extension/custom filtering, missing and inaccessible roots, file add/change/unlink, no-watcher destroy, rapid reconfiguration, filename-key item reuse, removal disposal and FilesArray index consistency. Keep filesystem changes in isolated fixtures and test watcher/service lifecycle separately from static discovery.
+[beyond.json](../beyond.json) selects the package; module tsconfig files select Node types. The tests under [tests/](../tests/README.md) import the compiled public modules; [validation](validation.md) maps each contract to its test and states what is not established.

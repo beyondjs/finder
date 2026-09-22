@@ -1,5 +1,5 @@
 # FilesArray
 
-FilesArray wraps a private FileData array and relative-key Set; it does not extend Array. push/find have file-oriented signatures. Dedicated insertion/deletion maintain uniqueness; splice and mutations through the array returned by sort can bypass that index.
+An ordered set of FileData keyed by relative path; it does not extend Array. `push` refuses duplicates and sorts by default, `splice` keeps the keys consistent, `filter` returns a new FilesArray and `sort()` returns the backing array.
 
-Read the [complete behavior and lifecycle contract](../../docs/architecture.md#filesarray-operations) before extending or integrating this module. Internal source files are not separate public module identities.
+Read [the contract](../../docs/architecture.md#filesarray) before extending or integrating this module.
