@@ -138,6 +138,10 @@ export /*bundle*/ class Finder extends DynamicProcessor() {
 	}
 
 	destroy() {
+		// A change announcement is deferred, so a finder destroyed within that window must not emit
+		clearTimeout(this.#timer);
+		this.#timer = void 0;
+
 		super.destroy();
 		this.#listener?.destroy();
 		this.#inclusions.forEach(inclusion => inclusion.destroy());
