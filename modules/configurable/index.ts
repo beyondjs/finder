@@ -6,6 +6,10 @@ import { equal } from '@beyond-js/equal/main';
 import { FilesArray } from '@beyond-js/finder/files';
 import { Finder } from '@beyond-js/finder/main';
 
+/**
+ * The files of a search whose configuration can change: it owns a finder, replaces it when the configuration
+ * changes, and exposes its files as an ordered `FilesArray`
+ */
 export /*bundle*/ class ConfigurableFinder extends DynamicProcessor(FilesArray) {
 	get dp() {
 		return 'utils.configurable-finder';

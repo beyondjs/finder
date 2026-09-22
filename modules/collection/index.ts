@@ -6,6 +6,11 @@ import { ConfigurableFinder } from '@beyond-js/finder/configurable';
 import { DynamicProcessor } from '@beyond-js/dynamic-processor/main';
 import { FinderFile } from './file';
 
+/**
+ * A long-lived collection of items created from the files a finder discovers, keyed by relative path, or by
+ * relative directory when it is filtered by filename. An item keeps its identity while its file exists and
+ * is destroyed when the file leaves the collection.
+ */
 export /*bundle*/ class FinderCollection<ItemType extends IFinderItemCtor> extends DynamicProcessor(Map<string, any>) {
 	get dp() {
 		return 'utils.finder-collection';
@@ -141,7 +146,7 @@ export /*bundle*/ class FinderCollection<ItemType extends IFinderItemCtor> exten
 	// forEach must respect the order of the files arranged by the finder
 	forEach(callback: (value: InstanceType<ItemType>, key: string, map: this) => void, thisArg?: any): void {
 		for (const key of this.#ordered) {
-			// super.get(key)! si estás seguro de que existe
+			// Every key of the order is in the map, so the value is present
 			const value = super.get(key) as InstanceType<ItemType>;
 			callback.call(thisArg, value, key, this);
 		}

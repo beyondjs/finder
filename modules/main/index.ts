@@ -8,6 +8,10 @@ import InclusionFiles from './inclusion/files';
 import Iterator from './iterator';
 import Parameters from './parameters';
 
+/**
+ * The discovery of the files under a root that pass a fixed filter, in the order of its includes, followed
+ * through a watcher client when one is given; missing includes and diagnostics are reported, not thrown
+ */
 export /*bundle*/ class Finder extends DynamicProcessor() {
 	get dp() {
 		return 'utils.finder';
