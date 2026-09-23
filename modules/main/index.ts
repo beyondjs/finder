@@ -1,6 +1,7 @@
 import type { WatcherClient } from '@beyond-js/watchers/client';
 import type { IFilterSpec, IDiagnostic } from '@beyond-js/finder/types';
 import type { ListenerType } from '@beyond-js/watchers/client';
+import type { FileData } from '@beyond-js/file/data';
 import { DynamicProcessor } from '@beyond-js/dynamic-processor/main';
 import Listener from './listener';
 import Inclusion from './inclusion';
@@ -60,7 +61,7 @@ export /*bundle*/ class Finder extends DynamicProcessor() {
 		return !!this.#listener?.watching;
 	}
 
-	get [Symbol.iterator]() {
+	get [Symbol.iterator](): () => Generator<FileData> {
 		return Iterator(this.#spec.includes, this.#inclusions);
 	}
 

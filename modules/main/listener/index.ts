@@ -99,6 +99,7 @@ export default class Listener {
 
 		// A watcher client destroyed before the finder has already released the listeners of its watcher
 		if (!this.#listener || this.#listener.destroyed) return;
-		this.#listener.destroy().catch((exc: Error) => console.error(exc.stack));
+		// The released Watchers answer with a promise; the published 1.0.7 releases synchronously and returns nothing
+		Promise.resolve(this.#listener.destroy()).catch((exc: Error) => console.error(exc.stack));
 	}
 }
